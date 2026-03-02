@@ -216,7 +216,8 @@ declare
   v_attempt record;
   v_elapsed_ms integer;
   v_correct boolean;
-  v_name text;
+  v_count integer;
+  v_worst integer;
 begin
   select * into v_attempt from public.single_attempts where id = p_attempt_id;
   if not found then
@@ -245,9 +246,20 @@ begin
     return;
   end if;
 
-  insert into public.pending_scores (scope, mode, song_id, time_ms)
-  values ('single', v_attempt.mode, v_attempt.song_id, v_elapsed_ms)
-  returning id into pending_id;
+  select count(*), max(time_ms)
+    into v_count, v_worst
+  from public.scores
+  where scope = 'single'
+    and mode = v_attempt.mode
+    and song_id = v_attempt.song_id;
+
+  if v_count < 30 or v_worst is null or v_elapsed_ms < v_worst then
+    insert into public.pending_scores (scope, mode, song_id, time_ms)
+    values ('single', v_attempt.mode, v_attempt.song_id, v_elapsed_ms)
+    returning id into pending_id;
+  else
+    pending_id := null;
+  end if;
 
   delete from public.single_attempts where id = v_attempt.id;
 
@@ -364,6 +376,8 @@ declare
   v_correct boolean;
   v_next_pos integer;
   v_total_ms integer;
+  v_count integer;
+  v_worst integer;
 begin
   select
     a.*,
@@ -424,9 +438,20 @@ begin
     from public.marathon_splits
     where run_id = v_attempt.run_id;
 
-    insert into public.pending_scores (scope, mode, song_id, time_ms)
-    values ('marathon', v_attempt.run_mode, null, v_total_ms)
-    returning id into pending_id;
+    select count(*), max(time_ms)
+      into v_count, v_worst
+    from public.scores
+    where scope = 'marathon'
+      and mode = v_attempt.run_mode
+      and song_id is null;
+
+    if v_count < 30 or v_worst is null or v_total_ms < v_worst then
+      insert into public.pending_scores (scope, mode, song_id, time_ms)
+      values ('marathon', v_attempt.run_mode, null, v_total_ms)
+      returning id into pending_id;
+    else
+      pending_id := null;
+    end if;
 
     update public.marathon_runs
       set status = 'completed', current_pos = v_next_pos

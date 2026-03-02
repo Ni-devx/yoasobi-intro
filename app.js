@@ -132,14 +132,17 @@
     views: {
       home: document.getElementById("view-home"),
       setup: document.getElementById("view-setup"),
-      play: document.getElementById("view-play"),
       result: document.getElementById("view-result"),
       ranking: document.getElementById("view-ranking")
     },
+    playerPanel: document.getElementById("player-panel"),
+    quizTimer: document.getElementById("quiz-timer"),
+    quizAnswer: document.getElementById("quiz-answer"),
+    setupRanking: document.getElementById("setup-ranking"),
+    rankingSongWrap: document.getElementById("ranking-song-wrap"),
     goSetup: document.getElementById("go-setup"),
     goRanking: document.getElementById("go-ranking"),
     backHome: document.getElementById("back-home"),
-    backSetup: document.getElementById("back-setup"),
     resultHome: document.getElementById("result-home"),
     rankingHome: document.getElementById("ranking-home"),
     playAgain: document.getElementById("play-again"),
@@ -154,7 +157,6 @@
     saveScore: document.getElementById("save-score"),
     modeToggle: document.getElementById("mode-toggle"),
     scopeToggle: document.getElementById("scope-toggle"),
-    setupRankSong: document.getElementById("setup-rank-song"),
     rankingMode: document.getElementById("ranking-mode"),
     rankingScope: document.getElementById("ranking-scope"),
     rankingSong: document.getElementById("ranking-song"),
@@ -217,26 +219,19 @@
     Object.keys(ui.views).forEach((key) => {
       ui.views[key].classList.toggle("active", key === name);
     });
-    state.view = name;
+    state.view = name || "play";
     if (name === "setup") {
       updateStartButton();
     }
   }
 
   function updateSongSelects() {
-    const setupSelected = ui.setupRankSong.value;
     const rankingSelected = ui.rankingSong.value;
 
-    ui.setupRankSong.innerHTML = "";
     ui.rankingSong.innerHTML = "";
 
     state.songs.forEach((song) => {
       const label = state.language === "ja" ? song.title_ja : song.title_en;
-
-      const optionSetup = document.createElement("option");
-      optionSetup.value = song.id;
-      optionSetup.textContent = label;
-      ui.setupRankSong.appendChild(optionSetup);
 
       const optionRanking = document.createElement("option");
       optionRanking.value = song.id;
@@ -244,7 +239,6 @@
       ui.rankingSong.appendChild(optionRanking);
     });
 
-    if (setupSelected) ui.setupRankSong.value = setupSelected;
     if (rankingSelected) ui.rankingSong.value = rankingSelected;
   }
 
@@ -282,7 +276,7 @@
     ui.scopeToggle.querySelectorAll("button").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.scope === scope);
     });
-    ui.setupRankSong.disabled = scope !== "single";
+    ui.setupRanking.classList.toggle("hidden", scope === "single");
     updateProgress();
     updateStartButton();
     loadSetupLeaderboard();
@@ -320,6 +314,14 @@
 
   function updateStartButton() {
     ui.startBtn.disabled = !state.playerReady || state.playing || !hasConfig;
+  }
+
+  function setQuizActive(active) {
+    ui.playerPanel.classList.toggle("play-active", active);
+    if (!active) {
+      ui.answerInput.value = "";
+      ui.submitBtn.disabled = true;
+    }
   }
 
   function startTimer() {
@@ -574,7 +576,8 @@
   async function startAttempt() {
     resetAttempt();
     resetResult();
-    showView("play");
+    setQuizActive(true);
+    showView(null);
 
     if (state.scope === "single") {
       await startSingle();
@@ -792,14 +795,9 @@
 
   async function loadSetupLeaderboard() {
     if (!supabaseClient || !songsLoaded) return;
+    if (state.scope !== "marathon") return;
     const mode = state.mode;
-    const scope = state.scope;
-    const songId = ui.setupRankSong.value || state.songs[0]?.id;
-    if (scope === "single" && songId) {
-      await loadLeaderboard(scope, mode, songId, ui.leaderboardSetup);
-    } else {
-      await loadLeaderboard(scope, mode, null, ui.leaderboardSetup);
-    }
+    await loadLeaderboard("marathon", mode, null, ui.leaderboardSetup);
   }
 
   async function loadRankingLeaderboard() {
@@ -807,7 +805,7 @@
     const mode = ui.rankingMode.value;
     const scope = ui.rankingScope.value;
     const songId = ui.rankingSong.value || state.songs[0]?.id;
-    ui.rankingSong.disabled = scope !== "single";
+    ui.rankingSongWrap.classList.toggle("hidden", scope !== "single");
 
     if (scope === "single") {
       await loadLeaderboard(scope, mode, songId, ui.leaderboardRanking);
@@ -816,26 +814,10 @@
     }
   }
 
-  async function qualifiesTop30(scope, mode, songId, timeMs) {
-    const data = await loadLeaderboard(scope, mode, songId, document.createElement("tbody"));
-    if (!data) return { qualifies: false, rank: null };
-
-    let faster = 0;
-    let equal = 0;
-    data.forEach((row) => {
-      if (row.time_ms < timeMs) faster += 1;
-      if (row.time_ms === timeMs) equal += 1;
-    });
-
-    const rank = faster + equal + 1;
-    if (rank <= 30) return { qualifies: true, rank };
-    if (data.length < 30) return { qualifies: true, rank: data.length + 1 };
-    return { qualifies: false, rank: null };
-  }
-
   async function showResult(success, timeMs) {
     resetAttempt();
     stopPlayer();
+    setQuizActive(false);
     showView("result");
 
     if (!success || !timeMs) {
@@ -848,13 +830,7 @@
     ui.resultTime.textContent = formatTime(timeMs);
     ui.resultMessage.textContent = i18n[state.language].status_correct;
 
-    const scope = state.resultScope;
-    const mode = state.resultMode;
-    const songId = scope === "single" ? state.resultSongId : null;
-
-    const { qualifies } = await qualifiesTop30(scope, mode, songId, timeMs);
-
-    if (qualifies && state.pendingScoreId) {
+    if (state.pendingScoreId) {
       ui.saveBlock.classList.remove("hidden");
     } else {
       ui.saveBlock.classList.add("hidden");
@@ -886,26 +862,46 @@
 
   function bindEvents() {
     ui.goSetup.addEventListener("click", () => {
+      setQuizActive(false);
+      resetAttempt();
       showView("setup");
       loadSetupLeaderboard();
     });
     ui.goRanking.addEventListener("click", () => {
+      setQuizActive(false);
+      resetAttempt();
+      stopPlayer();
       showView("ranking");
       loadRankingLeaderboard();
     });
-    ui.backHome.addEventListener("click", () => showView("home"));
-    ui.backSetup.addEventListener("click", () => {
+    ui.backHome.addEventListener("click", () => {
+      setQuizActive(false);
       resetAttempt();
       stopPlayer();
-      showView("setup");
+      showView("home");
     });
-    ui.resultHome.addEventListener("click", () => showView("home"));
-    ui.rankingHome.addEventListener("click", () => showView("home"));
+    ui.resultHome.addEventListener("click", () => {
+      setQuizActive(false);
+      resetAttempt();
+      stopPlayer();
+      showView("home");
+    });
+    ui.rankingHome.addEventListener("click", () => {
+      setQuizActive(false);
+      resetAttempt();
+      stopPlayer();
+      showView("home");
+    });
     ui.playAgain.addEventListener("click", () => {
+      setQuizActive(false);
+      resetAttempt();
       showView("setup");
       loadSetupLeaderboard();
     });
     ui.goRankingFromResult.addEventListener("click", () => {
+      setQuizActive(false);
+      resetAttempt();
+      stopPlayer();
       showView("ranking");
       loadRankingLeaderboard();
     });
@@ -926,7 +922,6 @@
       if (!button) return;
       setScope(button.dataset.scope);
     });
-    ui.setupRankSong.addEventListener("change", loadSetupLeaderboard);
 
     ui.rankingMode.addEventListener("change", loadRankingLeaderboard);
     ui.rankingScope.addEventListener("change", loadRankingLeaderboard);
@@ -1020,6 +1015,7 @@
 
     createPlayerIfReady();
     showView("home");
+    setQuizActive(false);
   }
 
   init();
