@@ -230,6 +230,11 @@
       ui.views[key].classList.toggle("active", key === name);
     });
     state.view = name || "play";
+
+    // #1: ホームとランキング画面ではプレイヤーパネルを非表示にする
+    const hidePlayer = name === "home" || name === "ranking";
+    ui.playerPanel.classList.toggle("hidden", hidePlayer);
+
     if (name === "setup") {
       updateStartButton();
     }
@@ -425,10 +430,10 @@
     if (!supabaseClient || !state.attemptId) return;
     try {
       if (state.scope === "single") {
-        // FIX #3: 不要な p_display_name 引数を削除
         await supabaseClient.rpc("finish_single", {
           p_attempt_id: state.attemptId,
-          p_answer_norm: ""
+          p_answer_norm: "",
+          p_display_name: ""
         });
       } else {
         await supabaseClient.rpc("finish_marathon_song", {
@@ -672,10 +677,10 @@
   }
 
   async function finishSingle(normalized) {
-    // FIX #3: 不要な p_display_name 引数を削除
     const { data, error } = await supabaseClient.rpc("finish_single", {
       p_attempt_id: state.attemptId,
-      p_answer_norm: normalized
+      p_answer_norm: normalized,
+      p_display_name: ""
     });
 
     if (error || !data || !data[0]) {
@@ -1086,7 +1091,7 @@
     }
 
     createPlayerIfReady();
-    showView("home");
+    showView("home");   // ← showView内でplayer-panelも非表示になる
     setQuizActive(false);
   }
 

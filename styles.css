@@ -255,11 +255,29 @@ button.ghost {
   height: 100%;
   z-index: 10;
   pointer-events: none;
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--panel);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* 音符アイコンと「音声のみ」テキストをオーバーレイに表示 */
+.overlay::before {
+  content: "🎵";
+  font-size: 48px;
+  line-height: 1;
+}
+
+.overlay::after {
+  content: "音声のみ / Audio only";
+  font-family: "Space Grotesk", "Noto Sans JP", sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
 }
 
 .video-wrapper.is-obscured .overlay {
