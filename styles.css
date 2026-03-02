@@ -62,12 +62,57 @@ main {
   gap: 24px;
 }
 
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
 .panel {
   background: linear-gradient(180deg, rgba(27, 36, 53, 0.9), rgba(17, 24, 39, 0.85));
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.home-panel {
+  text-align: center;
+  padding: 40px 24px;
+}
+
+.home-panel h2 {
+  margin: 0 0 12px;
+  font-size: clamp(26px, 4vw, 36px);
+}
+
+.home-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.setup-panel .controls {
+  margin-bottom: 20px;
+}
+
+.ranking-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
 }
 
 .controls {
@@ -248,21 +293,6 @@ button.ghost {
   gap: 12px;
 }
 
-.ranking-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.ranking-controls {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
 .ranking-table table {
   width: 100%;
   border-collapse: collapse;
@@ -286,6 +316,54 @@ button.ghost {
   padding: 24px;
 }
 
+.result-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.result-time {
+  font-size: clamp(40px, 6vw, 64px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.save-block {
+  display: grid;
+  grid-template-columns: 1fr 160px;
+  gap: 12px;
+  align-items: end;
+}
+
+.save-block.hidden {
+  display: none;
+}
+
+.save-block label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.save-block input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-strong);
+  color: var(--text);
+  font-family: inherit;
+}
+
+.result-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .site-footer {
   padding: 24px 8vw 40px;
   color: var(--muted);
@@ -296,6 +374,10 @@ button.ghost {
 
 @media (max-width: 840px) {
   .answer-area {
+    grid-template-columns: 1fr;
+  }
+
+  .save-block {
     grid-template-columns: 1fr;
   }
 

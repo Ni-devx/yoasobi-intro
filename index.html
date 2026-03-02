@@ -22,95 +22,161 @@
   </header>
 
   <main>
-    <section class="panel game-panel">
-      <div class="controls">
-        <div class="control">
-          <label data-i18n="mode">Mode</label>
-          <div class="segmented" id="mode-toggle">
-            <button data-mode="intro" class="active" data-i18n="mode_intro">Intro</button>
-            <button data-mode="random" data-i18n="mode_random">Random</button>
-          </div>
+    <section id="view-home" class="view active">
+      <div class="panel home-panel">
+        <h2 data-i18n="home_title">Intro RTA</h2>
+        <p class="subhead" data-i18n="home_desc">Choose start position and scope. Rankings are server-timed.</p>
+        <div class="home-actions">
+          <button id="go-setup" class="primary" data-i18n="home_start">Start</button>
+          <button id="go-ranking" class="ghost" data-i18n="home_ranking">Rankings</button>
         </div>
-        <div class="control">
-          <label data-i18n="scope">Scope</label>
-          <div class="segmented" id="scope-toggle">
-            <button data-scope="single" class="active" data-i18n="scope_single">Single</button>
-            <button data-scope="marathon" data-i18n="scope_marathon">Marathon</button>
-          </div>
-        </div>
-        <div class="control">
-          <label for="display-name" data-i18n="player_name">Name</label>
-          <input id="display-name" type="text" maxlength="20" placeholder="Anonymous">
-        </div>
-        <div class="control">
-          <label data-i18n="start">Start</label>
-          <button id="start-btn" class="primary" disabled>Start</button>
-        </div>
-      </div>
-
-      <div class="video-area">
-        <div class="video-wrapper" id="video-wrapper">
-          <iframe
-            id="player"
-            width="640"
-            height="360"
-            src="https://www.youtube.com/embed/?enablejsapi=1&controls=1"
-            title="YouTube video player"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-          ></iframe>
-          <div class="overlay" id="video-overlay"></div>
-        </div>
-        <div class="video-meta">
-          <span class="label" data-i18n="now_playing">Now Playing</span>
-          <span id="now-playing">-</span>
-          <span class="divider">•</span>
-          <span class="label" data-i18n="progress">Progress</span>
-          <span id="progress">-</span>
-        </div>
-      </div>
-
-      <div class="timer-area">
-        <div id="timer" class="timer">0.000</div>
-        <div id="status" class="status" data-i18n="ready">Ready</div>
-      </div>
-
-      <div class="answer-area">
-        <input id="answer-input" type="text" data-i18n-placeholder="answer_placeholder" placeholder="Song title">
-        <button id="submit-btn" class="primary" disabled data-i18n="submit">Submit</button>
       </div>
     </section>
 
-    <section class="panel ranking-panel">
-      <div class="ranking-header">
-        <h2 data-i18n="ranking">Ranking</h2>
+    <section id="view-setup" class="view">
+      <div class="panel setup-panel">
+        <div class="panel-header">
+          <h2 data-i18n="setup_title">Start Game</h2>
+          <button id="back-home" class="ghost" data-i18n="back_home">Home</button>
+        </div>
+        <div class="controls">
+          <div class="control">
+            <label data-i18n="mode">Start</label>
+            <div class="segmented" id="mode-toggle">
+              <button data-mode="intro" class="active" data-i18n="mode_intro">Intro</button>
+              <button data-mode="random" data-i18n="mode_random">Random</button>
+            </div>
+          </div>
+          <div class="control">
+            <label data-i18n="scope">Scope</label>
+            <div class="segmented" id="scope-toggle">
+              <button data-scope="single" class="active" data-i18n="scope_single">Single</button>
+              <button data-scope="marathon" data-i18n="scope_marathon">Marathon</button>
+            </div>
+          </div>
+          <div class="control">
+            <label data-i18n="rank_song">Ranking Song</label>
+            <select id="setup-rank-song"></select>
+          </div>
+          <div class="control">
+            <label data-i18n="start">Start</label>
+            <button id="start-btn" class="primary" disabled data-i18n="start_quiz">Start Quiz</button>
+          </div>
+        </div>
+
+        <div class="ranking-table">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th data-i18n="player">Player</th>
+                <th data-i18n="time">Time</th>
+                <th data-i18n="song">Song</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body-setup">
+              <tr><td colspan="4" class="empty" data-i18n="ranking_empty">No records yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-play" class="view">
+      <div class="panel game-panel">
+        <div class="panel-header">
+          <h2 data-i18n="play_title">Quiz</h2>
+          <button id="back-setup" class="ghost" data-i18n="back">Back</button>
+        </div>
+        <div class="video-area">
+          <div class="video-wrapper" id="video-wrapper">
+            <iframe
+              id="player"
+              width="640"
+              height="360"
+              src="https://www.youtube.com/embed/?enablejsapi=1&controls=1"
+              title="YouTube video player"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+            ></iframe>
+            <div class="overlay" id="video-overlay"></div>
+          </div>
+          <div class="video-meta">
+            <span class="label" data-i18n="now_playing">Now Playing</span>
+            <span id="now-playing">-</span>
+            <span class="divider">•</span>
+            <span class="label" data-i18n="progress">Progress</span>
+            <span id="progress">-</span>
+          </div>
+        </div>
+
+        <div class="timer-area">
+          <div id="timer" class="timer">0.000</div>
+          <div id="status" class="status" data-i18n="ready">Ready</div>
+        </div>
+
+        <div class="answer-area">
+          <input id="answer-input" type="text" data-i18n-placeholder="answer_placeholder" placeholder="Song title">
+          <button id="submit-btn" class="primary" disabled data-i18n="submit">Submit</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-result" class="view">
+      <div class="panel result-panel">
+        <div class="panel-header">
+          <h2 data-i18n="result_title">Result</h2>
+          <button id="result-home" class="ghost" data-i18n="back_home">Home</button>
+        </div>
+        <div class="result-body">
+          <div class="result-time" id="result-time">0.000</div>
+          <p id="result-message" class="status"></p>
+        </div>
+        <div id="save-block" class="save-block hidden">
+          <label for="result-name" data-i18n="player_name">Name</label>
+          <input id="result-name" type="text" maxlength="20" placeholder="Anonymous">
+          <button id="save-score" class="primary" data-i18n="save_score">Save</button>
+        </div>
+        <div class="result-actions">
+          <button id="play-again" class="primary" data-i18n="play_again">Play Again</button>
+          <button id="go-ranking-from-result" class="ghost" data-i18n="home_ranking">Rankings</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-ranking" class="view">
+      <div class="panel ranking-panel">
+        <div class="panel-header">
+          <h2 data-i18n="ranking">Ranking</h2>
+          <button id="ranking-home" class="ghost" data-i18n="back_home">Home</button>
+        </div>
         <div class="ranking-controls">
-          <select id="rank-mode">
+          <select id="ranking-mode">
             <option value="intro">Intro</option>
             <option value="random">Random</option>
           </select>
-          <select id="rank-scope">
+          <select id="ranking-scope">
             <option value="single" data-i18n="scope_single">Single</option>
             <option value="marathon" data-i18n="scope_marathon">Marathon</option>
           </select>
-          <select id="rank-song"></select>
+          <select id="ranking-song"></select>
         </div>
-      </div>
-      <div class="ranking-table">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th data-i18n="player">Player</th>
-              <th data-i18n="time">Time</th>
-              <th data-i18n="song">Song</th>
-            </tr>
-          </thead>
-          <tbody id="leaderboard-body">
-            <tr><td colspan="4" class="empty" data-i18n="ranking_empty">No records yet.</td></tr>
-          </tbody>
-        </table>
+        <div class="ranking-table">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th data-i18n="player">Player</th>
+                <th data-i18n="time">Time</th>
+                <th data-i18n="song">Song</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body-ranking">
+              <tr><td colspan="4" class="empty" data-i18n="ranking_empty">No records yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   </main>

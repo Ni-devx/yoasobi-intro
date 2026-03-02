@@ -6,24 +6,37 @@
     ja: {
       tagline: "非公式ファンプロジェクト",
       subtitle: "音声で当てるイントロRTA。公式YouTube MVのみ使用。",
+      home_title: "イントロRTA",
+      home_desc: "開始位置と対象を選んで挑戦。ランキングはサーバー計測です。",
+      home_start: "開始",
+      home_ranking: "ランキング",
+      setup_title: "ゲーム設定",
+      play_title: "クイズ",
+      result_title: "結果",
+      ranking: "ランキング",
       mode: "開始位置",
       mode_intro: "Intro",
       mode_random: "ランダム開始",
       scope: "対象",
       scope_single: "1曲",
       scope_marathon: "全曲",
+      rank_song: "ランキング曲",
       song: "楽曲",
       player_name: "名前",
       start: "スタート",
+      start_quiz: "スタート",
       now_playing: "再生中",
       progress: "進行",
       ready: "準備完了",
       answer_placeholder: "曲名を入力",
       submit: "送信",
-      ranking: "ランキング",
       ranking_empty: "まだ記録がありません",
       player: "プレイヤー",
       time: "タイム",
+      back: "戻る",
+      back_home: "ホーム",
+      play_again: "もう一度",
+      save_score: "保存",
       status_ready: "準備完了",
       status_loading: "接続中...",
       status_playing: "計測中",
@@ -35,29 +48,44 @@
       status_timeout: "10秒経過。記録なし",
       status_error: "エラーが発生しました",
       status_config: "Supabase設定を入力してください",
+      status_saved: "記録を保存しました",
+      status_not_qualified: "Top30外でした",
       hidden: "非表示"
     },
     en: {
       tagline: "Unofficial Fan Project",
       subtitle: "Guess by audio. Official YouTube MV only.",
+      home_title: "Intro RTA",
+      home_desc: "Choose start position and scope. Rankings are server-timed.",
+      home_start: "Start",
+      home_ranking: "Rankings",
+      setup_title: "Game Setup",
+      play_title: "Quiz",
+      result_title: "Result",
+      ranking: "Ranking",
       mode: "Start",
       mode_intro: "Intro",
       mode_random: "Random Start",
       scope: "Scope",
       scope_single: "Single",
       scope_marathon: "Marathon",
+      rank_song: "Ranking Song",
       song: "Song",
       player_name: "Name",
       start: "Start",
+      start_quiz: "Start",
       now_playing: "Now Playing",
       progress: "Progress",
       ready: "Ready",
       answer_placeholder: "Type the song title",
       submit: "Submit",
-      ranking: "Ranking",
       ranking_empty: "No records yet.",
       player: "Player",
       time: "Time",
+      back: "Back",
+      back_home: "Home",
+      play_again: "Play Again",
+      save_score: "Save",
       status_ready: "Ready",
       status_loading: "Connecting...",
       status_playing: "Running",
@@ -69,6 +97,8 @@
       status_timeout: "10s elapsed. No record.",
       status_error: "Something went wrong",
       status_config: "Add Supabase settings",
+      status_saved: "Score saved",
+      status_not_qualified: "Not in Top 30",
       hidden: "Hidden"
     }
   };
@@ -84,31 +114,58 @@
     runId: null,
     runPosition: 0,
     runTotal: 0,
-    pendingSongId: null,
+    nextSongId: null,
+    pendingScoreId: null,
+    resultTimeMs: null,
+    resultScope: null,
+    resultMode: null,
+    resultSongId: null,
     rafId: null,
     timeoutId: null,
     playing: false,
     playerReady: false,
-    statusKey: hasConfig ? "status_ready" : "status_config"
+    statusKey: hasConfig ? "status_ready" : "status_config",
+    view: "home"
   };
 
   const ui = {
+    views: {
+      home: document.getElementById("view-home"),
+      setup: document.getElementById("view-setup"),
+      play: document.getElementById("view-play"),
+      result: document.getElementById("view-result"),
+      ranking: document.getElementById("view-ranking")
+    },
+    goSetup: document.getElementById("go-setup"),
+    goRanking: document.getElementById("go-ranking"),
+    backHome: document.getElementById("back-home"),
+    backSetup: document.getElementById("back-setup"),
+    resultHome: document.getElementById("result-home"),
+    rankingHome: document.getElementById("ranking-home"),
+    playAgain: document.getElementById("play-again"),
+    goRankingFromResult: document.getElementById("go-ranking-from-result"),
     startBtn: document.getElementById("start-btn"),
     submitBtn: document.getElementById("submit-btn"),
     answerInput: document.getElementById("answer-input"),
-    displayName: document.getElementById("display-name"),
-    rankSongSelect: document.getElementById("rank-song"),
-    rankModeSelect: document.getElementById("rank-mode"),
-    rankScopeSelect: document.getElementById("rank-scope"),
+    resultTime: document.getElementById("result-time"),
+    resultMessage: document.getElementById("result-message"),
+    saveBlock: document.getElementById("save-block"),
+    resultName: document.getElementById("result-name"),
+    saveScore: document.getElementById("save-score"),
+    modeToggle: document.getElementById("mode-toggle"),
+    scopeToggle: document.getElementById("scope-toggle"),
+    setupRankSong: document.getElementById("setup-rank-song"),
+    rankingMode: document.getElementById("ranking-mode"),
+    rankingScope: document.getElementById("ranking-scope"),
+    rankingSong: document.getElementById("ranking-song"),
+    leaderboardSetup: document.getElementById("leaderboard-body-setup"),
+    leaderboardRanking: document.getElementById("leaderboard-body-ranking"),
     timer: document.getElementById("timer"),
     status: document.getElementById("status"),
     nowPlaying: document.getElementById("now-playing"),
     progress: document.getElementById("progress"),
-    modeToggle: document.getElementById("mode-toggle"),
-    scopeToggle: document.getElementById("scope-toggle"),
     overlay: document.getElementById("video-overlay"),
     videoWrapper: document.getElementById("video-wrapper"),
-    leaderboardBody: document.getElementById("leaderboard-body"),
     langToggle: document.getElementById("lang-toggle")
   };
 
@@ -150,28 +207,45 @@
       const key = el.dataset.i18nPlaceholder;
       el.placeholder = i18n[state.language][key] || key;
     });
-    updateRankSongSelects();
+    updateSongSelects();
     updateNowPlaying(false);
     updateProgress();
     setStatus(state.statusKey || (hasConfig ? "status_ready" : "status_config"));
   }
 
-  function updateRankSongSelects() {
-    const rankSelectedId = ui.rankSongSelect.value;
+  function showView(name) {
+    Object.keys(ui.views).forEach((key) => {
+      ui.views[key].classList.toggle("active", key === name);
+    });
+    state.view = name;
+    if (name === "setup") {
+      updateStartButton();
+    }
+  }
 
-    ui.rankSongSelect.innerHTML = "";
+  function updateSongSelects() {
+    const setupSelected = ui.setupRankSong.value;
+    const rankingSelected = ui.rankingSong.value;
+
+    ui.setupRankSong.innerHTML = "";
+    ui.rankingSong.innerHTML = "";
 
     state.songs.forEach((song) => {
       const label = state.language === "ja" ? song.title_ja : song.title_en;
-      const rankOption = document.createElement("option");
-      rankOption.value = song.id;
-      rankOption.textContent = label;
-      ui.rankSongSelect.appendChild(rankOption);
+
+      const optionSetup = document.createElement("option");
+      optionSetup.value = song.id;
+      optionSetup.textContent = label;
+      ui.setupRankSong.appendChild(optionSetup);
+
+      const optionRanking = document.createElement("option");
+      optionRanking.value = song.id;
+      optionRanking.textContent = label;
+      ui.rankingSong.appendChild(optionRanking);
     });
 
-    if (rankSelectedId) {
-      ui.rankSongSelect.value = rankSelectedId;
-    }
+    if (setupSelected) ui.setupRankSong.value = setupSelected;
+    if (rankingSelected) ui.rankingSong.value = rankingSelected;
   }
 
   function updateNowPlaying(reveal) {
@@ -200,6 +274,7 @@
     ui.modeToggle.querySelectorAll("button").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.mode === mode);
     });
+    loadSetupLeaderboard();
   }
 
   function setScope(scope) {
@@ -207,17 +282,17 @@
     ui.scopeToggle.querySelectorAll("button").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.scope === scope);
     });
-    resetAttempt();
-    resetRun();
+    ui.setupRankSong.disabled = scope !== "single";
     updateProgress();
     updateStartButton();
+    loadSetupLeaderboard();
   }
 
   function resetRun() {
     state.runId = null;
     state.runPosition = 0;
     state.runTotal = 0;
-    state.pendingSongId = null;
+    state.nextSongId = null;
   }
 
   function resetAttempt() {
@@ -231,9 +306,20 @@
     ui.videoWrapper.classList.remove("is-obscured");
   }
 
+  function resetResult() {
+    state.pendingScoreId = null;
+    state.resultTimeMs = null;
+    state.resultScope = null;
+    state.resultMode = null;
+    state.resultSongId = null;
+    ui.resultTime.textContent = "0.000";
+    ui.resultMessage.textContent = "";
+    ui.resultName.value = "";
+    ui.saveBlock.classList.add("hidden");
+  }
+
   function updateStartButton() {
-    const marathonActive = state.scope === "marathon" && state.runId;
-    ui.startBtn.disabled = !state.playerReady || marathonActive || state.playing || !hasConfig;
+    ui.startBtn.disabled = !state.playerReady || state.playing || !hasConfig;
   }
 
   function startTimer() {
@@ -253,7 +339,13 @@
     }
   }
 
-  async function timeoutCleanup() {
+  function stopPlayer() {
+    if (player && typeof player.stopVideo === "function") {
+      player.stopVideo();
+    }
+  }
+
+  async function cleanupTimeout() {
     if (!supabaseClient || !state.attemptId) return;
     try {
       if (state.scope === "single") {
@@ -282,13 +374,11 @@
     stopTimer();
     setStatus("status_timeout");
     updateNowPlaying(true);
-    await timeoutCleanup();
-
-    if (state.scope === "marathon") {
-      resetRun();
-    }
+    await cleanupTimeout();
+    resetAttempt();
+    resetRun();
     updateProgress();
-    updateStartButton();
+    showResult(false, null);
   }
 
   async function cueVideo(videoId) {
@@ -357,14 +447,14 @@
       setStatus("status_config");
       return;
     }
-    if (state.playing || !state.playerReady) return;
+    if (!state.playerReady) return;
 
     setStatus("status_loading");
     ui.startBtn.disabled = true;
 
     const songId = await drawSingleSong();
     const song = state.songs.find((s) => s.id === songId);
-    if (!song || !song.video_id || song.video_id === "VIDEO_ID_HERE") {
+    if (!song || !song.video_id) {
       setStatus("status_error");
       updateStartButton();
       return;
@@ -406,15 +496,14 @@
       setStatus("status_config");
       return;
     }
-    if (state.playing || !state.playerReady) return;
+    if (!state.playerReady) return;
 
     setStatus("status_loading");
     ui.startBtn.disabled = true;
 
-    const displayName = ui.displayName.value.trim();
     const { data, error } = await supabaseClient.rpc("start_marathon", {
       p_mode: state.mode,
-      p_display_name: displayName
+      p_display_name: ""
     });
 
     if (error || !data || !data[0]) {
@@ -427,21 +516,21 @@
     state.runId = data[0].run_id;
     state.runTotal = data[0].total_songs;
     state.runPosition = data[0].current_position;
-    state.pendingSongId = data[0].song_id;
+    state.nextSongId = data[0].song_id;
 
     await startMarathonSong();
   }
 
   async function startMarathonSong() {
-    if (!state.runId || !state.pendingSongId) {
+    if (!state.runId || !state.nextSongId) {
       setStatus("status_error");
       resetRun();
       updateStartButton();
       return;
     }
 
-    const song = state.songs.find((s) => s.id === state.pendingSongId);
-    if (!song || !song.video_id || song.video_id === "VIDEO_ID_HERE") {
+    const song = state.songs.find((s) => s.id === state.nextSongId);
+    if (!song || !song.video_id) {
       setStatus("status_error");
       resetRun();
       updateStartButton();
@@ -462,6 +551,7 @@
 
     const { data, error } = await supabaseClient.rpc("start_marathon_song", {
       p_run_id: state.runId,
+      p_song_id: state.nextSongId,
       p_max_start_sec: maxStartSec
     });
 
@@ -482,6 +572,10 @@
   }
 
   async function startAttempt() {
+    resetAttempt();
+    resetResult();
+    showView("play");
+
     if (state.scope === "single") {
       await startSingle();
     } else {
@@ -490,11 +584,10 @@
   }
 
   async function finishSingle(normalized) {
-    const displayName = ui.displayName.value.trim();
     const { data, error } = await supabaseClient.rpc("finish_single", {
       p_attempt_id: state.attemptId,
       p_answer_norm: normalized,
-      p_display_name: displayName
+      p_display_name: ""
     });
 
     if (error || !data || !data[0]) {
@@ -506,7 +599,7 @@
     const result = data[0];
     if (result.status !== "ok") {
       if (result.status === "timeout") {
-        handleTimeout();
+        await handleTimeout();
         return;
       }
       setStatus("status_wrong");
@@ -518,16 +611,16 @@
     clearTimeout(state.timeoutId);
     ui.videoWrapper.classList.remove("is-obscured");
     ui.submitBtn.disabled = true;
-    updateStartButton();
     updateNowPlaying(true);
 
     const timeMs = result.time_ms || 0;
-    ui.timer.textContent = formatTime(timeMs);
-    ui.timer.classList.remove("flash");
-    void ui.timer.offsetWidth;
-    ui.timer.classList.add("flash");
-    setStatus("status_correct");
-    await loadLeaderboard();
+    state.pendingScoreId = result.pending_id;
+    state.resultTimeMs = timeMs;
+    state.resultScope = "single";
+    state.resultMode = state.mode;
+    state.resultSongId = state.currentSong?.id || null;
+
+    showResult(true, timeMs);
   }
 
   async function finishMarathon(normalized) {
@@ -545,7 +638,16 @@
     const result = data[0];
 
     if (result.status === "wrong") {
-      setStatus("status_wrong");
+      state.playing = false;
+      stopTimer();
+      clearTimeout(state.timeoutId);
+      ui.videoWrapper.classList.remove("is-obscured");
+      ui.submitBtn.disabled = true;
+      setStatus("status_failed");
+      updateNowPlaying(true);
+      resetRun();
+      updateProgress();
+      showResult(false, null);
       return;
     }
 
@@ -559,7 +661,7 @@
       updateNowPlaying(true);
       resetRun();
       updateProgress();
-      updateStartButton();
+      showResult(false, null);
       return;
     }
 
@@ -579,7 +681,7 @@
       setStatus("status_next");
 
       state.runPosition = result.next_song_pos;
-      state.pendingSongId = result.next_song_id;
+      state.nextSongId = result.next_song_id;
       updateProgress();
 
       setTimeout(() => {
@@ -597,16 +699,15 @@
       updateNowPlaying(true);
 
       const totalMs = result.total_ms || 0;
-      ui.timer.textContent = formatTime(totalMs);
-      ui.timer.classList.remove("flash");
-      void ui.timer.offsetWidth;
-      ui.timer.classList.add("flash");
-      setStatus("status_completed");
+      state.pendingScoreId = result.pending_id;
+      state.resultTimeMs = totalMs;
+      state.resultScope = "marathon";
+      state.resultMode = state.mode;
+      state.resultSongId = null;
 
       resetRun();
       updateProgress();
-      updateStartButton();
-      await loadLeaderboard();
+      showResult(true, totalMs);
     }
   }
 
@@ -616,34 +717,61 @@
     if (!raw) return;
     const normalized = normalizeAnswer(raw);
 
-    if (!isCorrectAnswer(normalized)) {
-      setStatus("status_wrong");
-      return;
-    }
-
     if (!supabaseClient) {
       setStatus("status_config");
       return;
     }
 
-    if (state.scope === "single") {
-      await finishSingle(normalized);
-    } else {
+    if (state.scope === "marathon") {
       await finishMarathon(normalized);
+      return;
     }
+
+    if (!isCorrectAnswer(normalized)) {
+      setStatus("status_wrong");
+      return;
+    }
+
+    await finishSingle(normalized);
   }
 
-  async function loadLeaderboard() {
-    if (!supabaseClient) return;
-    const mode = ui.rankModeSelect.value;
-    const scope = ui.rankScopeSelect.value;
-    const songId = ui.rankSongSelect.value;
+  function renderLeaderboardRows(rows, container) {
+    container.innerHTML = "";
+    if (!rows || rows.length === 0) {
+      const emptyRow = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 4;
+      cell.className = "empty";
+      cell.textContent = i18n[state.language].ranking_empty;
+      emptyRow.appendChild(cell);
+      container.appendChild(emptyRow);
+      return;
+    }
 
+    rows.forEach((row) => {
+      const tr = document.createElement("tr");
+      const song = state.songs.find((s) => s.id === row.song_id);
+      const songLabel = row.song_id
+        ? (state.language === "ja" ? song?.title_ja : song?.title_en)
+        : "-";
+
+      tr.innerHTML = `
+        <td>${row.rank}</td>
+        <td>${row.display_name || "Anonymous"}</td>
+        <td>${formatTime(row.time_ms)}</td>
+        <td>${songLabel || "-"}</td>
+      `;
+      container.appendChild(tr);
+    });
+  }
+
+  async function loadLeaderboard(scope, mode, songId, container) {
+    if (!supabaseClient) return;
     let query = supabaseClient
       .from("leaderboard")
       .select("rank, display_name, time_ms, song_id, scope")
-      .eq("mode", mode)
       .eq("scope", scope)
+      .eq("mode", mode)
       .order("rank", { ascending: true });
 
     if (scope === "single") {
@@ -658,43 +786,136 @@
       return;
     }
 
-    ui.leaderboardBody.innerHTML = "";
-    if (!data || data.length === 0) {
-      const emptyRow = document.createElement("tr");
-      const cell = document.createElement("td");
-      cell.colSpan = 4;
-      cell.className = "empty";
-      cell.textContent = i18n[state.language].ranking_empty;
-      emptyRow.appendChild(cell);
-      ui.leaderboardBody.appendChild(emptyRow);
+    renderLeaderboardRows(data, container);
+    return data;
+  }
+
+  async function loadSetupLeaderboard() {
+    if (!supabaseClient || !songsLoaded) return;
+    const mode = state.mode;
+    const scope = state.scope;
+    const songId = ui.setupRankSong.value || state.songs[0]?.id;
+    if (scope === "single" && songId) {
+      await loadLeaderboard(scope, mode, songId, ui.leaderboardSetup);
+    } else {
+      await loadLeaderboard(scope, mode, null, ui.leaderboardSetup);
+    }
+  }
+
+  async function loadRankingLeaderboard() {
+    if (!supabaseClient || !songsLoaded) return;
+    const mode = ui.rankingMode.value;
+    const scope = ui.rankingScope.value;
+    const songId = ui.rankingSong.value || state.songs[0]?.id;
+    ui.rankingSong.disabled = scope !== "single";
+
+    if (scope === "single") {
+      await loadLeaderboard(scope, mode, songId, ui.leaderboardRanking);
+    } else {
+      await loadLeaderboard(scope, mode, null, ui.leaderboardRanking);
+    }
+  }
+
+  async function qualifiesTop30(scope, mode, songId, timeMs) {
+    const data = await loadLeaderboard(scope, mode, songId, document.createElement("tbody"));
+    if (!data) return { qualifies: false, rank: null };
+
+    let faster = 0;
+    let equal = 0;
+    data.forEach((row) => {
+      if (row.time_ms < timeMs) faster += 1;
+      if (row.time_ms === timeMs) equal += 1;
+    });
+
+    const rank = faster + equal + 1;
+    if (rank <= 30) return { qualifies: true, rank };
+    if (data.length < 30) return { qualifies: true, rank: data.length + 1 };
+    return { qualifies: false, rank: null };
+  }
+
+  async function showResult(success, timeMs) {
+    resetAttempt();
+    stopPlayer();
+    showView("result");
+
+    if (!success || !timeMs) {
+      ui.resultTime.textContent = "-";
+      ui.resultMessage.textContent = i18n[state.language].status_failed;
+      ui.saveBlock.classList.add("hidden");
       return;
     }
 
-    data.forEach((row) => {
-      const tr = document.createElement("tr");
-      const song = state.songs.find((s) => s.id === row.song_id);
-      const songLabel = row.song_id
-        ? (state.language === "ja" ? song?.title_ja : song?.title_en)
-        : "-";
+    ui.resultTime.textContent = formatTime(timeMs);
+    ui.resultMessage.textContent = i18n[state.language].status_correct;
 
-      tr.innerHTML = `
-        <td>${row.rank}</td>
-        <td>${row.display_name || "Anonymous"}</td>
-        <td>${formatTime(row.time_ms)}</td>
-        <td>${songLabel || "-"}</td>
-      `;
-      ui.leaderboardBody.appendChild(tr);
+    const scope = state.resultScope;
+    const mode = state.resultMode;
+    const songId = scope === "single" ? state.resultSongId : null;
+
+    const { qualifies } = await qualifiesTop30(scope, mode, songId, timeMs);
+
+    if (qualifies && state.pendingScoreId) {
+      ui.saveBlock.classList.remove("hidden");
+    } else {
+      ui.saveBlock.classList.add("hidden");
+      state.pendingScoreId = null;
+      ui.resultMessage.textContent = i18n[state.language].status_not_qualified;
+    }
+  }
+
+  async function submitScore() {
+    if (!state.pendingScoreId) return;
+    const name = ui.resultName.value.trim();
+    const { data, error } = await supabaseClient.rpc("submit_score", {
+      p_pending_id: state.pendingScoreId,
+      p_display_name: name
     });
+
+    if (error || !data || !data[0] || data[0].status !== "ok") {
+      console.error(error);
+      ui.resultMessage.textContent = i18n[state.language].status_error;
+      return;
+    }
+
+    ui.resultMessage.textContent = i18n[state.language].status_saved;
+    ui.saveBlock.classList.add("hidden");
+    state.pendingScoreId = null;
+    await loadSetupLeaderboard();
+    await loadRankingLeaderboard();
   }
 
   function bindEvents() {
+    ui.goSetup.addEventListener("click", () => {
+      showView("setup");
+      loadSetupLeaderboard();
+    });
+    ui.goRanking.addEventListener("click", () => {
+      showView("ranking");
+      loadRankingLeaderboard();
+    });
+    ui.backHome.addEventListener("click", () => showView("home"));
+    ui.backSetup.addEventListener("click", () => {
+      resetAttempt();
+      stopPlayer();
+      showView("setup");
+    });
+    ui.resultHome.addEventListener("click", () => showView("home"));
+    ui.rankingHome.addEventListener("click", () => showView("home"));
+    ui.playAgain.addEventListener("click", () => {
+      showView("setup");
+      loadSetupLeaderboard();
+    });
+    ui.goRankingFromResult.addEventListener("click", () => {
+      showView("ranking");
+      loadRankingLeaderboard();
+    });
+
     ui.startBtn.addEventListener("click", startAttempt);
     ui.submitBtn.addEventListener("click", submitAnswer);
     ui.answerInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        submitAnswer();
-      }
+      if (event.key === "Enter") submitAnswer();
     });
+
     ui.modeToggle.addEventListener("click", (event) => {
       const button = event.target.closest("button");
       if (!button) return;
@@ -705,16 +926,19 @@
       if (!button) return;
       setScope(button.dataset.scope);
     });
-    ui.rankModeSelect.addEventListener("change", loadLeaderboard);
-    ui.rankScopeSelect.addEventListener("change", () => {
-      ui.rankSongSelect.disabled = ui.rankScopeSelect.value !== "single";
-      loadLeaderboard();
-    });
-    ui.rankSongSelect.addEventListener("change", loadLeaderboard);
+    ui.setupRankSong.addEventListener("change", loadSetupLeaderboard);
+
+    ui.rankingMode.addEventListener("change", loadRankingLeaderboard);
+    ui.rankingScope.addEventListener("change", loadRankingLeaderboard);
+    ui.rankingSong.addEventListener("change", loadRankingLeaderboard);
+
+    ui.saveScore.addEventListener("click", submitScore);
+
     ui.langToggle.addEventListener("click", () => {
       state.language = state.language === "ja" ? "en" : "ja";
       applyTranslations();
-      loadLeaderboard();
+      loadSetupLeaderboard();
+      loadRankingLeaderboard();
     });
   }
 
@@ -735,15 +959,12 @@
     });
 
     songsLoaded = true;
-    updateRankSongSelects();
-    if (state.songs[0]) {
-      ui.rankSongSelect.value = state.songs[0].id;
-    }
+    updateSongSelects();
   }
 
   function createPlayerIfReady() {
     if (!youtubeReady || !songsLoaded || player) return;
-    const firstSong = state.songs.find((song) => song.video_id && song.video_id !== "VIDEO_ID_HERE");
+    const firstSong = state.songs.find((song) => song.video_id);
     if (!firstSong) {
       setStatus("status_error");
       return;
@@ -784,7 +1005,6 @@
     bindEvents();
     setMode(state.mode);
     setScope(state.scope);
-    ui.rankSongSelect.disabled = ui.rankScopeSelect.value !== "single";
 
     try {
       await loadSongs();
@@ -799,7 +1019,7 @@
     }
 
     createPlayerIfReady();
-    loadLeaderboard();
+    showView("home");
   }
 
   init();

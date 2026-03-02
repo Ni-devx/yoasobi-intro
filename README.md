@@ -68,13 +68,15 @@ values (
 - `start_single(p_song_id, p_mode, p_max_start_sec)`  
   1曲プレイの計測開始（サーバー開始時刻を返す）
 - `finish_single(p_attempt_id, p_answer_norm, p_display_name)`  
-  1曲プレイの正解判定と記録
+  1曲プレイの正解判定（Top30時のみ後で保存）
 - `start_marathon(p_mode, p_display_name)`  
   全曲マラソンの開始（シャッフル順を確定）
-- `start_marathon_song(p_run_id, p_max_start_sec)`  
+- `start_marathon_song(p_run_id, p_song_id, p_max_start_sec)`  
   マラソン中の1曲開始（サーバー開始時刻を返す）
 - `finish_marathon_song(p_attempt_id, p_answer_norm)`  
-  マラソン中の正解判定、完走時に総合タイムを記録
+  マラソン中の正解判定（完走時のみ後で保存）
+- `submit_score(p_pending_id, p_display_name)`  
+  Top30対象の記録を保存
 
 ## GitHub Pages
 

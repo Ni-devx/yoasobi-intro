@@ -71,12 +71,31 @@ create table if not exists public.scores (
   )
 );
 
+-- Pending scores (ask name only if Top30)
+create table if not exists public.pending_scores (
+  id uuid primary key default gen_random_uuid(),
+  scope text not null check (scope in ('single', 'marathon')),
+  mode text not null check (mode in ('intro', 'random')),
+  song_id text references public.songs(id),
+  time_ms integer not null,
+  created_at timestamptz not null default now(),
+  check (
+    (scope = 'single' and song_id is not null and time_ms between 1 and 10000)
+    or
+    (scope = 'marathon' and song_id is null and time_ms >= 1)
+  )
+);
+
 alter table public.songs enable row level security;
 alter table public.single_attempts enable row level security;
 alter table public.marathon_runs enable row level security;
 alter table public.marathon_attempts enable row level security;
 alter table public.marathon_splits enable row level security;
 alter table public.scores enable row level security;
+alter table public.pending_scores enable row level security;
+
+drop policy if exists "songs_read" on public.songs;
+drop policy if exists "scores_read" on public.scores;
 
 create policy "songs_read" on public.songs
   for select
@@ -182,12 +201,13 @@ end;
 $$;
 
 -- Single song finish
+drop function if exists public.finish_single(uuid, text, text);
 create or replace function public.finish_single(
   p_attempt_id uuid,
   p_answer_norm text,
   p_display_name text
 )
-returns table (status text, time_ms integer)
+returns table (status text, time_ms integer, pending_id uuid)
 language plpgsql
 security definer
 set search_path = public
@@ -200,7 +220,7 @@ declare
 begin
   select * into v_attempt from public.single_attempts where id = p_attempt_id;
   if not found then
-    return query select 'invalid_attempt', null;
+    return query select 'invalid_attempt', null, null;
     return;
   end if;
 
@@ -211,7 +231,7 @@ begin
 
   if v_elapsed_ms > 10000 then
     delete from public.single_attempts where id = v_attempt.id;
-    return query select 'timeout', null;
+    return query select 'timeout', null, null;
     return;
   end if;
 
@@ -221,20 +241,17 @@ begin
   where id = v_attempt.song_id;
 
   if not v_correct then
-    return query select 'wrong', null;
+    return query select 'wrong', null, null;
     return;
   end if;
 
-  v_name := coalesce(nullif(trim(p_display_name), ''), 'Anonymous');
-
-  insert into public.scores (scope, mode, song_id, time_ms, display_name)
-  values ('single', v_attempt.mode, v_attempt.song_id, v_elapsed_ms, v_name);
-
-  perform public.trim_leaderboard('single', v_attempt.mode, v_attempt.song_id);
+  insert into public.pending_scores (scope, mode, song_id, time_ms)
+  values ('single', v_attempt.mode, v_attempt.song_id, v_elapsed_ms)
+  returning id into pending_id;
 
   delete from public.single_attempts where id = v_attempt.id;
 
-  return query select 'ok', v_elapsed_ms;
+  return query select 'ok', v_elapsed_ms, pending_id;
 end;
 $$;
 
@@ -276,9 +293,12 @@ begin
 end;
 $$;
 
+drop function if exists public.start_marathon_song(uuid, integer);
+
 -- Start a song inside a marathon run (server time 기준)
 create or replace function public.start_marathon_song(
   p_run_id uuid,
+  p_song_id text,
   p_max_start_sec integer
 )
 returns table (attempt_id uuid, started_at timestamptz, song_id text, start_sec integer, song_pos integer, total_songs integer)
@@ -304,6 +324,9 @@ begin
   if v_song_id is null then
     raise exception 'invalid position';
   end if;
+  if p_song_id <> v_song_id then
+    raise exception 'song mismatch';
+  end if;
 
   if v_run.mode = 'intro' then
     v_start_sec := 0;
@@ -325,11 +348,12 @@ end;
 $$;
 
 -- Finish a song inside a marathon run
+drop function if exists public.finish_marathon_song(uuid, text);
 create or replace function public.finish_marathon_song(
   p_attempt_id uuid,
   p_answer_norm text
 )
-returns table (status text, time_ms integer, next_song_id text, next_song_pos integer, total_ms integer)
+returns table (status text, time_ms integer, next_song_id text, next_song_pos integer, total_ms integer, pending_id uuid)
 language plpgsql
 security definer
 set search_path = public
@@ -354,12 +378,12 @@ begin
   where a.id = p_attempt_id;
 
   if not found then
-    return query select 'invalid_attempt', null, null, null, null;
+    return query select 'invalid_attempt', null, null, null, null, null;
     return;
   end if;
 
   if v_attempt.run_status <> 'in_progress' then
-    return query select 'run_not_active', null, null, null, null;
+    return query select 'run_not_active', null, null, null, null, null;
     return;
   end if;
 
@@ -371,7 +395,7 @@ begin
   if v_elapsed_ms > 10000 then
     update public.marathon_runs set status = 'failed' where id = v_attempt.run_id;
     delete from public.marathon_attempts where id = v_attempt.id;
-    return query select 'timeout', null, null, null, null;
+    return query select 'timeout', null, null, null, null, null;
     return;
   end if;
 
@@ -381,7 +405,9 @@ begin
   where id = v_attempt.song_id;
 
   if not v_correct then
-    return query select 'wrong', null, null, null, null;
+    update public.marathon_runs set status = 'failed' where id = v_attempt.run_id;
+    delete from public.marathon_attempts where id = v_attempt.id;
+    return query select 'wrong', null, null, null, null, null;
     return;
   end if;
 
@@ -398,22 +424,54 @@ begin
     from public.marathon_splits
     where run_id = v_attempt.run_id;
 
-    insert into public.scores (scope, mode, song_id, time_ms, display_name)
-    values ('marathon', v_attempt.run_mode, null, v_total_ms, v_attempt.display_name);
-
-    perform public.trim_leaderboard('marathon', v_attempt.run_mode, null);
+    insert into public.pending_scores (scope, mode, song_id, time_ms)
+    values ('marathon', v_attempt.run_mode, null, v_total_ms)
+    returning id into pending_id;
 
     update public.marathon_runs
       set status = 'completed', current_pos = v_next_pos
       where id = v_attempt.run_id;
 
-    return query select 'completed', v_elapsed_ms, null, null, v_total_ms;
+    return query select 'completed', v_elapsed_ms, null, null, v_total_ms, pending_id;
     return;
   end if;
 
   update public.marathon_runs set current_pos = v_next_pos where id = v_attempt.run_id;
 
-  return query select 'next', v_elapsed_ms, v_attempt.song_order[v_next_pos], v_next_pos, null;
+  return query select 'next', v_elapsed_ms, v_attempt.song_order[v_next_pos], v_next_pos, null, null;
+end;
+$$;
+
+-- Submit score after asking display name (Top30 only)
+create or replace function public.submit_score(
+  p_pending_id uuid,
+  p_display_name text
+)
+returns table (status text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_pending record;
+  v_name text;
+begin
+  select * into v_pending from public.pending_scores where id = p_pending_id;
+  if not found then
+    return query select 'invalid_pending';
+    return;
+  end if;
+
+  v_name := coalesce(nullif(trim(p_display_name), ''), 'Anonymous');
+
+  insert into public.scores (scope, mode, song_id, time_ms, display_name)
+  values (v_pending.scope, v_pending.mode, v_pending.song_id, v_pending.time_ms, v_name);
+
+  perform public.trim_leaderboard(v_pending.scope, v_pending.mode, v_pending.song_id);
+
+  delete from public.pending_scores where id = p_pending_id;
+
+  return query select 'ok';
 end;
 $$;
 
@@ -421,5 +479,6 @@ grant execute on function public.draw_single_song() to anon, authenticated;
 grant execute on function public.start_single(text, text, integer) to anon, authenticated;
 grant execute on function public.finish_single(uuid, text, text) to anon, authenticated;
 grant execute on function public.start_marathon(text, text) to anon, authenticated;
-grant execute on function public.start_marathon_song(uuid, integer) to anon, authenticated;
+grant execute on function public.start_marathon_song(uuid, text, integer) to anon, authenticated;
 grant execute on function public.finish_marathon_song(uuid, text) to anon, authenticated;
+grant execute on function public.submit_score(uuid, text) to anon, authenticated;
