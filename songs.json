@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "songs": [
+    {
+      "id": "idol",
+      "title_ja": "アイドル",
+      "title_en": "Idol",
+      "video_id": "VIDEO_ID_HERE",
+      "answers": ["アイドル", "Idol", "IDOL"]
+    },
+    {
+      "id": "yoru-ni-kakeru",
+      "title_ja": "夜に駆ける",
+      "title_en": "Racing into the Night",
+      "video_id": "VIDEO_ID_HERE",
+      "answers": ["夜に駆ける", "Racing into the Night", "Yoru ni Kakeru"]
+    },
+    {
+      "id": "gunjou",
+      "title_ja": "群青",
+      "title_en": "Blue",
+      "video_id": "VIDEO_ID_HERE",
+      "answers": ["群青", "Blue", "Gunjou"]
+    },
+    {
+      "id": "kaibutsu",
+      "title_ja": "怪物",
+      "title_en": "Monster",
+      "video_id": "VIDEO_ID_HERE",
+      "answers": ["怪物", "Monster", "Kaibutsu"]
+    },
+    {
+      "id": "harujion",
+      "title_ja": "ハルジオン",
+      "title_en": "Halzion",
+      "video_id": "VIDEO_ID_HERE",
+      "answers": ["ハルジオン", "Halzion", "Harujion"]
+    },
+    {
+      "id": "sangenshoku",
+      "title_ja": "三原色",
+      "title_en": "RGB",
+      "video_id": "VIDEO_ID_HERE",
+      "answers": ["三原色", "RGB", "Sangenshoku"]
+    }
+  ]
+}

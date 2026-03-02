@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YOASOBI Intro RTA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow" data-i18n="tagline">Unofficial Fan Project</p>
+      <h1>YOASOBI Intro RTA</h1>
+      <p class="subhead" data-i18n="subtitle">Guess the song by audio. Official YouTube MV only.</p>
+    </div>
+    <div class="header-actions">
+      <button id="lang-toggle" class="ghost">日本語 / EN</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel game-panel">
+      <div class="controls">
+        <div class="control">
+          <label data-i18n="mode">Mode</label>
+          <div class="segmented" id="mode-toggle">
+            <button data-mode="intro" class="active" data-i18n="mode_intro">Intro</button>
+            <button data-mode="random" data-i18n="mode_random">Random</button>
+          </div>
+        </div>
+        <div class="control">
+          <label for="song-select" data-i18n="song">Song</label>
+          <select id="song-select"></select>
+        </div>
+        <div class="control">
+          <label for="display-name" data-i18n="player_name">Name</label>
+          <input id="display-name" type="text" maxlength="20" placeholder="Anonymous">
+        </div>
+        <div class="control">
+          <label data-i18n="start">Start</label>
+          <button id="start-btn" class="primary" disabled>Start</button>
+        </div>
+      </div>
+
+      <div class="video-area">
+        <div class="video-wrapper" id="video-wrapper">
+          <iframe
+            id="player"
+            width="640"
+            height="360"
+            src="https://www.youtube.com/embed/?enablejsapi=1&controls=1"
+            title="YouTube video player"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          ></iframe>
+          <div class="overlay" id="video-overlay"></div>
+        </div>
+        <div class="video-meta">
+          <span class="label" data-i18n="now_playing">Now Playing</span>
+          <span id="now-playing">-</span>
+        </div>
+      </div>
+
+      <div class="timer-area">
+        <div id="timer" class="timer">0.000</div>
+        <div id="status" class="status" data-i18n="ready">Ready</div>
+      </div>
+
+      <div class="answer-area">
+        <input id="answer-input" type="text" data-i18n-placeholder="answer_placeholder" placeholder="Song title">
+        <button id="submit-btn" class="primary" disabled data-i18n="submit">Submit</button>
+      </div>
+    </section>
+
+    <section class="panel ranking-panel">
+      <div class="ranking-header">
+        <h2 data-i18n="ranking">Ranking</h2>
+        <div class="ranking-controls">
+          <select id="rank-mode">
+            <option value="intro">Intro</option>
+            <option value="random">Random</option>
+          </select>
+          <select id="rank-scope">
+            <option value="song" data-i18n="scope_song">Per Song</option>
+            <option value="all" data-i18n="scope_all">All Songs</option>
+          </select>
+          <select id="rank-song"></select>
+        </div>
+      </div>
+      <div class="ranking-table">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th data-i18n="player">Player</th>
+              <th data-i18n="time">Time</th>
+              <th data-i18n="song">Song</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+            <tr><td colspan="4" class="empty" data-i18n="ranking_empty">No records yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Unofficial Fan Project</p>
+    <p>Videos are streamed via official YouTube embed player</p>
+    <p>All rights belong to their respective copyright holders</p>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="app.js"></script>
+</body>
+</html>
