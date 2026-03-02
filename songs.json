@@ -5,43 +5,239 @@
       "id": "idol",
       "title_ja": "アイドル",
       "title_en": "Idol",
-      "video_id": "VIDEO_ID_HERE",
-      "answers": ["アイドル", "Idol", "IDOL"]
+      "video_id": "ZRtdQ81jPUQ",
+      "answers": ["アイドル"]
     },
     {
       "id": "yoru-ni-kakeru",
       "title_ja": "夜に駆ける",
-      "title_en": "Racing into the Night",
-      "video_id": "VIDEO_ID_HERE",
-      "answers": ["夜に駆ける", "Racing into the Night", "Yoru ni Kakeru"]
+      "title_en": "Into the Night",
+      "video_id": "by4SYYWlhEs",
+      "answers": ["夜に駆ける"]
     },
     {
       "id": "gunjou",
       "title_ja": "群青",
       "title_en": "Blue",
-      "video_id": "VIDEO_ID_HERE",
-      "answers": ["群青", "Blue", "Gunjou"]
+      "video_id": "Y4nEEZwckuU",
+      "answers": ["群青"]
     },
     {
       "id": "kaibutsu",
       "title_ja": "怪物",
       "title_en": "Monster",
-      "video_id": "VIDEO_ID_HERE",
-      "answers": ["怪物", "Monster", "Kaibutsu"]
+      "video_id": "dy90tA3TT1c",
+      "answers": ["怪物"]
     },
     {
       "id": "harujion",
       "title_ja": "ハルジオン",
       "title_en": "Halzion",
-      "video_id": "VIDEO_ID_HERE",
-      "answers": ["ハルジオン", "Halzion", "Harujion"]
+      "video_id": "kzdJkT4kp-A",
+      "answers": ["ハルジオン"]
     },
     {
       "id": "sangenshoku",
       "title_ja": "三原色",
       "title_en": "RGB",
-      "video_id": "VIDEO_ID_HERE",
-      "answers": ["三原色", "RGB", "Sangenshoku"]
-    }
+      "video_id": "nhOhFOoURnE",
+      "answers": ["三原色"]
+    },
+    {
+      "id": "yuusya",
+      "title_ja": "勇者",
+      "title_en": "The Brave",
+      "video_id": "OIBODIPC_8Y",
+      "answers": ["勇者"]
+    },
+    {
+      "id": "shukufuku",
+      "title_ja": "祝福",
+      "title_en": "The Blessing",
+      "video_id": "3eytpBOkOFA",
+      "answers": ["祝福"]
+    },
+    {
+      "id": "tabun",
+      "title_ja": "たぶん",
+      "title_en": "Probably",
+      "video_id": "8iuLXODzL04",
+      "answers": ["たぶん"]
+    },
+    {
+      "id": "anoyumewonazotte",
+      "title_ja": "あの夢をなぞって",
+      "title_en": "Tracing A Dream",
+      "video_id": "sAuEeM_6zpk",
+      "answers": ["あの夢をなぞって"]
+    },
+    {
+      "id": "haruka",
+      "title_ja": "ハルカ",
+      "title_en": "Haruka",
+      "video_id": "vd3IlOjSUGQ",
+      "answers": ["ハルカ"]
+    },
+    {
+      "id": "encore",
+      "title_ja": "アンコール",
+      "title_en": "Encore",
+      "video_id": "vcGbefQBvJ4",
+      "answers": ["アンコール"]
+    },
+    {
+      "id": "loveletter",
+      "title_ja": "ラブレター",
+      "title_en": "Love Letter",
+      "video_id": "mnta9Pp2LqA",
+      "answers": ["ラブレター"]
+    },
+    {
+      "id": "yasashiisuisei",
+      "title_ja": "優しい彗星",
+      "title_en": "Comet",
+      "video_id": "VyvhvlYvRnc",
+      "answers": ["優しい彗星"]
+    },
+    {
+      "id": "seventeen",
+      "title_ja": "セブンティーン",
+      "title_en": "Seventeen",
+      "video_id": "0yoM7ETNPIY",
+      "answers": ["セブンティーン"]
+    },
+    {
+      "id": "biribiri",
+      "title_ja": "Biri-Biri",
+      "title_en": "Biri-Biri",
+      "video_id": "shZyg5VFI1Y",
+      "answers": ["Biri-Biri"]
+    },
+    {
+      "id": "adventure",
+      "title_ja": "アドベンチャー",
+      "title_en": "Adventure",
+      "video_id": "Av3xaZkVpJs",
+      "answers": ["アドベンチャー"]
+    },
+    {
+      "id": "tsubame",
+      "title_ja": "ツバメ",
+      "title_en": "The Swallow",
+      "video_id": "qDL3zhB8-MM",
+      "answers": ["ツバメ"]
+    },
+    {
+      "id": "mousukoshidake",
+      "title_ja": "もう少しだけ",
+      "title_en": "Just a Little Step",
+      "video_id": "K1Tz2yNmamI",
+      "answers": ["もう少しだけ"]
+    },
+    {
+      "id": "moshimoinochigaegaketara",
+      "title_ja": "もしも命が描けたら",
+      "title_en": "If I Could Draw Life ",
+      "video_id": "I0kytvnHG-Q",
+      "answers": ["もしも命が描けたら"]
+    },
+    {
+      "id": "taisyouroman",
+      "title_ja": "大正浪漫",
+      "title_en": "Romance",
+      "video_id": "wJQ9ig_d8yY",
+      "answers": ["大正浪漫"]
+    },
+    {
+      "id": "uminomanimani",
+      "title_ja": "海のまにまに",
+      "title_en": "manimani",
+      "video_id": "7G0ovtPqHnI",
+      "answers": ["海のまにまに"]
+    },
+    {
+      "id": "watchme",
+      "title_ja": "Watch me!",
+      "title_en": "Watch me!",
+      "video_id": "evtoG-4dLM4",
+      "answers": ["Watch me!"]
+    },
+    {
+      "id": "sukida",
+      "title_ja": "好きだ",
+      "title_en": "Loving You",
+      "video_id": "WQ6ePunO8uY",
+      "answers": ["好きだ"]
+    },
+    {
+      "id": "butainitatte",
+      "title_ja": "舞台に立って",
+      "title_en": "On the Stage",
+      "video_id": "GWDzKel_vuQ",
+      "answers": ["舞台に立って"]
+    },
+    {
+      "id": "heartbeat",
+      "title_ja": "HEART BEAT",
+      "title_en": "HEART BEAT",
+      "video_id": "ZSr3P-Rn6x0",
+      "answers": ["HEART BEAT"]
+    },
+    {
+      "id": "gekijou",
+      "title_ja": "劇上",
+      "title_en": "Gekijou",
+      "video_id": "GuIkxXiVHps",
+      "answers": ["劇上"]
+    },
+    {
+      "id": "monotone",
+      "title_ja": "モノトーン",
+      "title_en": "Monotone",
+      "video_id": "sJ-2X3rHtXw",
+      "answers": ["モノトーン"]
+    },
+    {
+      "id": "players",
+      "title_ja": "PLAYERS",
+      "title_en": "PLAYERS",
+      "video_id": "ZfR_FP_7w00",
+      "answers": ["PLAYERS"]
+    },
+    {
+      "id": "baby",
+      "title_ja": "BABY",
+      "title_en": "BABY",
+      "video_id": "tWqZxTAy7rU",
+      "answers": ["BABY"]
+    },
+    {
+      "id": "adorena",
+      "title_ja": "アドレナ",
+      "title_en": "Adorena",
+      "video_id": "ARqP5ohiubY",
+      "answers": ["アドレナ"]
+    },
+    {
+      "id": "undead",
+      "title_ja": "UNDEAD",
+      "title_en": "UNDEAD",
+      "video_id": "Jj1_mfUzjOs",
+      "answers": ["UNDEAD"]
+    },
+    {
+      "id": "newme",
+      "title_ja": "New me",
+      "title_en": "New me",
+      "video_id": "HRlW6yZo6Kc",
+      "answers": ["New me"]
+    },  
+    {
+      "id": "mister",
+      "title_ja": "ミスター",
+      "title_en": "Mister",
+      "video_id": "2-c0DFt6vK4",
+      "answers": ["ミスター"]
+    }       
   ]
 }
