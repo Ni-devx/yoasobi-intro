@@ -29,6 +29,7 @@
       progress: "進行",
       ready: "準備完了",
       answer_placeholder: "曲名を入力",
+      answer_select_placeholder: "選択してください",
       submit: "送信",
       ranking_empty: "まだ記録がありません",
       player: "プレイヤー",
@@ -78,6 +79,7 @@
       progress: "Progress",
       ready: "Ready",
       answer_placeholder: "Type the song title",
+      answer_select_placeholder: "Select a song",
       submit: "Submit",
       ranking_empty: "No records yet.",
       player: "Player",
@@ -149,7 +151,7 @@
     goRankingFromResult: document.getElementById("go-ranking-from-result"),
     startBtn: document.getElementById("start-btn"),
     submitBtn: document.getElementById("submit-btn"),
-    answerInput: document.getElementById("answer-input"),
+    answerSelect: document.getElementById("answer-select"),
     resultTime: document.getElementById("result-time"),
     resultMessage: document.getElementById("result-message"),
     saveBlock: document.getElementById("save-block"),
@@ -212,6 +214,9 @@
     updateSongSelects();
     updateNowPlaying(false);
     updateProgress();
+    if (state.playing) {
+      populateAnswerSelect();
+    }
     setStatus(state.statusKey || (hasConfig ? "status_ready" : "status_config"));
   }
 
@@ -313,15 +318,70 @@
   }
 
   function updateStartButton() {
-    ui.startBtn.disabled = !state.playerReady || state.playing || !hasConfig;
+    ui.startBtn.disabled = state.playing || !hasConfig || !songsLoaded;
   }
 
   function setQuizActive(active) {
     ui.playerPanel.classList.toggle("play-active", active);
     if (!active) {
-      ui.answerInput.value = "";
+      ui.answerSelect.innerHTML = "";
       ui.submitBtn.disabled = true;
     }
+  }
+
+  async function ensurePlayerReady() {
+    if (state.playerReady) return true;
+    createPlayerIfReady();
+    setStatus("status_loading");
+    const start = Date.now();
+    while (!state.playerReady && Date.now() - start < 8000) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    return state.playerReady;
+  }
+
+  function getAnswerNormForSong(song) {
+    if (song?.answers_normalized && song.answers_normalized.length > 0) {
+      return song.answers_normalized[0];
+    }
+    return normalizeAnswer(state.language === "ja" ? song?.title_ja : song?.title_en);
+  }
+
+  function populateAnswerSelect() {
+    if (!ui.answerSelect) return;
+    const currentSelection = ui.answerSelect.value;
+    const options = state.songs.map((song) => ({
+      id: song.id,
+      label: state.language === "ja" ? song.title_ja : song.title_en,
+      answer: getAnswerNormForSong(song)
+    }));
+
+    for (let i = options.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+
+    ui.answerSelect.innerHTML = "";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    placeholder.textContent = i18n[state.language].answer_select_placeholder;
+    ui.answerSelect.appendChild(placeholder);
+
+    options.forEach((opt) => {
+      const option = document.createElement("option");
+      option.value = opt.id;
+      option.textContent = opt.label;
+      option.dataset.answer = opt.answer;
+      ui.answerSelect.appendChild(option);
+    });
+
+    if (currentSelection) {
+      ui.answerSelect.value = currentSelection;
+    }
+    ui.submitBtn.disabled = true;
   }
 
   function startTimer() {
@@ -411,7 +471,7 @@
     state.playing = true;
     ui.videoWrapper.classList.add("is-obscured");
     ui.submitBtn.disabled = false;
-    ui.answerInput.value = "";
+    populateAnswerSelect();
     setStatus("status_playing");
 
     if (player && state.currentSong?.video_id) {
@@ -426,12 +486,6 @@
     state.timeoutId = setTimeout(() => {
       handleTimeout();
     }, 10000);
-  }
-
-  function isCorrectAnswer(normalizedAnswer) {
-    if (!state.currentSong) return false;
-    const answers = state.currentSong.answers_normalized || [];
-    return answers.includes(normalizedAnswer);
   }
 
   async function drawSingleSong() {
@@ -449,7 +503,16 @@
       setStatus("status_config");
       return;
     }
-    if (!state.playerReady) return;
+    if (!await ensurePlayerReady()) {
+      setStatus("status_error");
+      updateStartButton();
+      return;
+    }
+    if (!player) {
+      setStatus("status_error");
+      updateStartButton();
+      return;
+    }
 
     setStatus("status_loading");
     ui.startBtn.disabled = true;
@@ -498,7 +561,16 @@
       setStatus("status_config");
       return;
     }
-    if (!state.playerReady) return;
+    if (!await ensurePlayerReady()) {
+      setStatus("status_error");
+      updateStartButton();
+      return;
+    }
+    if (!player) {
+      setStatus("status_error");
+      updateStartButton();
+      return;
+    }
 
     setStatus("status_loading");
     ui.startBtn.disabled = true;
@@ -716,9 +788,11 @@
 
   async function submitAnswer() {
     if (!state.playing) return;
-    const raw = ui.answerInput.value.trim();
-    if (!raw) return;
-    const normalized = normalizeAnswer(raw);
+    const selectedId = ui.answerSelect.value;
+    if (!selectedId) return;
+    const selectedOption = ui.answerSelect.selectedOptions[0];
+    const selectedSong = state.songs.find((song) => song.id === selectedId);
+    const normalized = selectedOption?.dataset?.answer || getAnswerNormForSong(selectedSong);
 
     if (!supabaseClient) {
       setStatus("status_config");
@@ -730,7 +804,7 @@
       return;
     }
 
-    if (!isCorrectAnswer(normalized)) {
+    if (!selectedSong || selectedSong.id !== state.currentSong?.id) {
       setStatus("status_wrong");
       return;
     }
@@ -908,8 +982,8 @@
 
     ui.startBtn.addEventListener("click", startAttempt);
     ui.submitBtn.addEventListener("click", submitAnswer);
-    ui.answerInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") submitAnswer();
+    ui.answerSelect.addEventListener("change", () => {
+      ui.submitBtn.disabled = !ui.answerSelect.value;
     });
 
     ui.modeToggle.addEventListener("click", (event) => {
@@ -955,6 +1029,7 @@
 
     songsLoaded = true;
     updateSongSelects();
+    updateStartButton();
   }
 
   function createPlayerIfReady() {
@@ -971,7 +1046,9 @@
         controls: 1,
         rel: 0,
         playsinline: 1,
-        origin: window.location.origin
+        ...(window.location.origin && window.location.origin !== "null"
+          ? { origin: window.location.origin }
+          : {})
       },
       events: {
         onReady: () => {
