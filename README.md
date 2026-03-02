@@ -9,6 +9,22 @@ Unofficial fan project. This site uses the official YouTube IFrame Player API an
 3. Run the SQL in `supabase.sql` inside the Supabase SQL editor.
 4. Insert your songs into the `songs` table.
 
+## Generate SQL from songs.json
+
+Generate SQL for the `songs` table directly from `songs.json`:
+
+```bash
+node scripts/generate-songs-sql.js > songs.sql
+```
+
+If you want to reset the table first:
+
+```bash
+node scripts/generate-songs-sql.js --truncate > songs.sql
+```
+
+Then paste `songs.sql` into the Supabase SQL editor.
+
 ## Songs JSON + Server Verification
 
 The UI uses `songs.json` as the source of truth for display.  
