@@ -429,18 +429,11 @@
   async function cleanupTimeout() {
     if (!supabaseClient || !state.attemptId) return;
     try {
-      if (state.scope === "single") {
-        await supabaseClient.rpc("finish_single", {
-          p_attempt_id: state.attemptId,
-          p_answer_norm: "",
-          p_display_name: ""
-        });
-      } else {
-        await supabaseClient.rpc("finish_marathon_song", {
-          p_attempt_id: state.attemptId,
-          p_answer_norm: ""
-        });
-      }
+      // finish_attempt は single/marathon 共通
+      await supabaseClient.rpc("finish_attempt", {
+        p_attempt_id: state.attemptId,
+        p_answer_norm: ""
+      });
     } catch (error) {
       console.warn(error);
     }
@@ -507,16 +500,6 @@
     }, 10000);
   }
 
-  async function drawSingleSong() {
-    const { data, error } = await supabaseClient.rpc("draw_single_song");
-    if (error || !data || !data[0]) {
-      console.error(error);
-      setStatus("status_error");
-      return null;
-    }
-    return data[0].song_id;
-  }
-
   async function startSingle() {
     if (!supabaseClient) {
       setStatus("status_config");
@@ -536,13 +519,14 @@
     setStatus("status_loading");
     ui.startBtn.disabled = true;
 
-    const songId = await drawSingleSong();
-    const song = state.songs.find((s) => s.id === songId);
-    if (!song || !song.video_id) {
+    // draw_single_song() 廃止: クライアント側でランダムに選曲
+    const validSongs = state.songs.filter((s) => s.video_id);
+    if (!validSongs.length) {
       setStatus("status_error");
       updateStartButton();
       return;
     }
+    const song = validSongs[Math.floor(Math.random() * validSongs.length)];
 
     state.currentSong = song;
     updateNowPlaying(false);
@@ -556,9 +540,10 @@
       maxStartSec = Math.max(0, Math.floor(duration) - 10);
     }
 
-    const { data, error } = await supabaseClient.rpc("start_single", {
+    const { data, error } = await supabaseClient.rpc("start_attempt", {
       p_song_id: song.id,
       p_mode: state.mode,
+      p_run_id: null,
       p_max_start_sec: maxStartSec
     });
 
@@ -570,7 +555,6 @@
     }
 
     state.attemptId = data[0].attempt_id;
-    // FIX #2: serverStartMs は使わない。beginPlay() 内で clientStartMs を記録する
     beginPlay(data[0].start_sec || 0);
   }
 
@@ -594,8 +578,7 @@
     ui.startBtn.disabled = true;
 
     const { data, error } = await supabaseClient.rpc("start_marathon", {
-      p_mode: state.mode,
-      p_display_name: ""
+      p_mode: state.mode
     });
 
     if (error || !data || !data[0]) {
@@ -641,9 +624,10 @@
       maxStartSec = Math.max(0, Math.floor(duration) - 10);
     }
 
-    const { data, error } = await supabaseClient.rpc("start_marathon_song", {
-      p_run_id: state.runId,
+    const { data, error } = await supabaseClient.rpc("start_attempt", {
       p_song_id: state.nextSongId,
+      p_mode: state.mode,
+      p_run_id: state.runId,
       p_max_start_sec: maxStartSec
     });
 
@@ -656,10 +640,6 @@
     }
 
     state.attemptId = data[0].attempt_id;
-    // FIX #2: serverStartMs は使わない。beginPlay() 内で clientStartMs を記録する
-    state.runPosition = data[0].song_pos;
-    state.runTotal = data[0].total_songs;
-
     beginPlay(data[0].start_sec || 0);
   }
 
@@ -677,10 +657,9 @@
   }
 
   async function finishSingle(normalized) {
-    const { data, error } = await supabaseClient.rpc("finish_single", {
+    const { data, error } = await supabaseClient.rpc("finish_attempt", {
       p_attempt_id: state.attemptId,
-      p_answer_norm: normalized,
-      p_display_name: ""
+      p_answer_norm: normalized
     });
 
     if (error || !data || !data[0]) {
@@ -699,12 +678,11 @@
       return;
     }
 
-    stopPlay(); // FIX #6: 共通関数を使用
+    stopPlay();
     updateNowPlaying(true);
 
     const timeMs = result.time_ms || 0;
-    // FIX #7: result サブオブジェクトに集約
-    state.result.pendingScoreId = result.pending_id;
+    state.result.pendingScoreId = result.score_id;
     state.result.timeMs = timeMs;
     state.result.scope = "single";
     state.result.mode = state.mode;
@@ -714,7 +692,7 @@
   }
 
   async function finishMarathon(normalized) {
-    const { data, error } = await supabaseClient.rpc("finish_marathon_song", {
+    const { data, error } = await supabaseClient.rpc("finish_attempt", {
       p_attempt_id: state.attemptId,
       p_answer_norm: normalized
     });
@@ -727,18 +705,8 @@
 
     const result = data[0];
 
-    if (result.status === "wrong") {
-      stopPlay(); // FIX #6
-      setStatus("status_failed");
-      updateNowPlaying(true);
-      resetRun();
-      updateProgress();
-      showResult(false, null);
-      return;
-    }
-
-    if (result.status === "timeout" || result.status === "run_not_active") {
-      stopPlay(); // FIX #6
+    if (result.status === "wrong" || result.status === "timeout") {
+      stopPlay();
       setStatus("status_failed");
       updateNowPlaying(true);
       resetRun();
@@ -748,7 +716,7 @@
     }
 
     if (result.status === "next") {
-      stopPlay(); // FIX #6
+      stopPlay();
       updateNowPlaying(true);
 
       const timeMs = result.time_ms || 0;
@@ -769,12 +737,11 @@
     }
 
     if (result.status === "completed") {
-      stopPlay(); // FIX #6
+      stopPlay();
       updateNowPlaying(true);
 
       const totalMs = result.total_ms || 0;
-      // FIX #7: result サブオブジェクトに集約
-      state.result.pendingScoreId = result.pending_id;
+      state.result.pendingScoreId = result.score_id;
       state.result.timeMs = totalMs;
       state.result.scope = "marathon";
       state.result.mode = state.mode;
@@ -917,7 +884,7 @@
     if (!state.result.pendingScoreId) return;
     const name = ui.resultName.value.trim();
     const { data, error } = await supabaseClient.rpc("submit_score", {
-      p_pending_id: state.result.pendingScoreId,
+      p_score_id: state.result.pendingScoreId,
       p_display_name: name
     });
 
