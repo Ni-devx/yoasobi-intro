@@ -32,8 +32,11 @@
           </div>
         </div>
         <div class="control">
-          <label for="song-select" data-i18n="song">Song</label>
-          <select id="song-select"></select>
+          <label data-i18n="scope">Scope</label>
+          <div class="segmented" id="scope-toggle">
+            <button data-scope="single" class="active" data-i18n="scope_single">Single</button>
+            <button data-scope="marathon" data-i18n="scope_marathon">Marathon</button>
+          </div>
         </div>
         <div class="control">
           <label for="display-name" data-i18n="player_name">Name</label>
@@ -62,6 +65,9 @@
         <div class="video-meta">
           <span class="label" data-i18n="now_playing">Now Playing</span>
           <span id="now-playing">-</span>
+          <span class="divider">•</span>
+          <span class="label" data-i18n="progress">Progress</span>
+          <span id="progress">-</span>
         </div>
       </div>
 
@@ -85,8 +91,8 @@
             <option value="random">Random</option>
           </select>
           <select id="rank-scope">
-            <option value="song" data-i18n="scope_song">Per Song</option>
-            <option value="all" data-i18n="scope_all">All Songs</option>
+            <option value="single" data-i18n="scope_single">Single</option>
+            <option value="marathon" data-i18n="scope_marathon">Marathon</option>
           </select>
           <select id="rank-song"></select>
         </div>

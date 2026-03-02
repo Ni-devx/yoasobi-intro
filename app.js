@@ -6,19 +6,21 @@
     ja: {
       tagline: "非公式ファンプロジェクト",
       subtitle: "音声で当てるイントロRTA。公式YouTube MVのみ使用。",
-      mode: "モード",
+      mode: "開始位置",
       mode_intro: "Intro",
-      mode_random: "Random",
+      mode_random: "ランダム開始",
+      scope: "対象",
+      scope_single: "1曲",
+      scope_marathon: "全曲",
       song: "楽曲",
       player_name: "名前",
       start: "スタート",
       now_playing: "再生中",
+      progress: "進行",
       ready: "準備完了",
       answer_placeholder: "曲名を入力",
       submit: "送信",
       ranking: "ランキング",
-      scope_song: "曲別",
-      scope_all: "全曲",
       ranking_empty: "まだ記録がありません",
       player: "プレイヤー",
       time: "タイム",
@@ -27,6 +29,9 @@
       status_playing: "計測中",
       status_wrong: "不正解。もう一度!",
       status_correct: "正解!",
+      status_next: "次の曲へ...",
+      status_completed: "全曲クリア!",
+      status_failed: "失敗。記録なし",
       status_timeout: "10秒経過。記録なし",
       status_error: "エラーが発生しました",
       status_config: "Supabase設定を入力してください",
@@ -35,19 +40,21 @@
     en: {
       tagline: "Unofficial Fan Project",
       subtitle: "Guess by audio. Official YouTube MV only.",
-      mode: "Mode",
+      mode: "Start",
       mode_intro: "Intro",
-      mode_random: "Random",
+      mode_random: "Random Start",
+      scope: "Scope",
+      scope_single: "Single",
+      scope_marathon: "Marathon",
       song: "Song",
       player_name: "Name",
       start: "Start",
       now_playing: "Now Playing",
+      progress: "Progress",
       ready: "Ready",
       answer_placeholder: "Type the song title",
       submit: "Submit",
       ranking: "Ranking",
-      scope_song: "Per Song",
-      scope_all: "All Songs",
       ranking_empty: "No records yet.",
       player: "Player",
       time: "Time",
@@ -56,6 +63,9 @@
       status_playing: "Running",
       status_wrong: "Wrong. Try again!",
       status_correct: "Correct!",
+      status_next: "Next song...",
+      status_completed: "Marathon complete!",
+      status_failed: "Failed. No record.",
       status_timeout: "10s elapsed. No record.",
       status_error: "Something went wrong",
       status_config: "Add Supabase settings",
@@ -66,10 +76,15 @@
   const state = {
     songs: [],
     mode: "intro",
+    scope: "single",
     language: navigator.language && navigator.language.startsWith("ja") ? "ja" : "en",
     currentSong: null,
     attemptId: null,
     serverStartMs: null,
+    runId: null,
+    runPosition: 0,
+    runTotal: 0,
+    pendingSongId: null,
     rafId: null,
     timeoutId: null,
     playing: false,
@@ -82,14 +97,15 @@
     submitBtn: document.getElementById("submit-btn"),
     answerInput: document.getElementById("answer-input"),
     displayName: document.getElementById("display-name"),
-    songSelect: document.getElementById("song-select"),
     rankSongSelect: document.getElementById("rank-song"),
     rankModeSelect: document.getElementById("rank-mode"),
     rankScopeSelect: document.getElementById("rank-scope"),
     timer: document.getElementById("timer"),
     status: document.getElementById("status"),
     nowPlaying: document.getElementById("now-playing"),
+    progress: document.getElementById("progress"),
     modeToggle: document.getElementById("mode-toggle"),
+    scopeToggle: document.getElementById("scope-toggle"),
     overlay: document.getElementById("video-overlay"),
     videoWrapper: document.getElementById("video-wrapper"),
     leaderboardBody: document.getElementById("leaderboard-body"),
@@ -103,6 +119,7 @@
   let player = null;
   let youtubeReady = false;
   let songsLoaded = false;
+  let cueResolver = null;
 
   function normalizeAnswer(text) {
     return (text || "")
@@ -112,9 +129,9 @@
       .replace(/[\p{P}\p{S}]/gu, "");
   }
 
-  function formatTime(ms) {
-    const clamped = Math.max(0, Math.min(ms, 10000));
-    return (clamped / 1000).toFixed(3);
+  function formatTime(ms, capMs) {
+    const value = typeof capMs === "number" ? Math.min(ms, capMs) : ms;
+    return (Math.max(0, value) / 1000).toFixed(3);
   }
 
   function setStatus(key) {
@@ -133,35 +150,25 @@
       const key = el.dataset.i18nPlaceholder;
       el.placeholder = i18n[state.language][key] || key;
     });
-    updateSongSelects();
+    updateRankSongSelects();
     updateNowPlaying(false);
+    updateProgress();
     setStatus(state.statusKey || (hasConfig ? "status_ready" : "status_config"));
   }
 
-  function updateSongSelects() {
-    const selectedId = ui.songSelect.value;
+  function updateRankSongSelects() {
     const rankSelectedId = ui.rankSongSelect.value;
 
-    ui.songSelect.innerHTML = "";
     ui.rankSongSelect.innerHTML = "";
 
     state.songs.forEach((song) => {
       const label = state.language === "ja" ? song.title_ja : song.title_en;
-
-      const option = document.createElement("option");
-      option.value = song.id;
-      option.textContent = label;
-      ui.songSelect.appendChild(option);
-
       const rankOption = document.createElement("option");
       rankOption.value = song.id;
       rankOption.textContent = label;
       ui.rankSongSelect.appendChild(rankOption);
     });
 
-    if (selectedId) {
-      ui.songSelect.value = selectedId;
-    }
     if (rankSelectedId) {
       ui.rankSongSelect.value = rankSelectedId;
     }
@@ -176,12 +183,41 @@
     ui.nowPlaying.textContent = title;
   }
 
+  function updateProgress() {
+    if (state.scope === "marathon" && state.runTotal > 0) {
+      ui.progress.textContent = `${state.runPosition} / ${state.runTotal}`;
+      return;
+    }
+    if (state.scope === "single" && state.currentSong) {
+      ui.progress.textContent = "1 / 1";
+      return;
+    }
+    ui.progress.textContent = "-";
+  }
+
   function setMode(mode) {
     state.mode = mode;
     ui.modeToggle.querySelectorAll("button").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.mode === mode);
     });
-    ui.songSelect.disabled = mode === "random";
+  }
+
+  function setScope(scope) {
+    state.scope = scope;
+    ui.scopeToggle.querySelectorAll("button").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.scope === scope);
+    });
+    resetAttempt();
+    resetRun();
+    updateProgress();
+    updateStartButton();
+  }
+
+  function resetRun() {
+    state.runId = null;
+    state.runPosition = 0;
+    state.runTotal = 0;
+    state.pendingSongId = null;
   }
 
   function resetAttempt() {
@@ -192,15 +228,19 @@
     clearTimeout(state.timeoutId);
     state.timeoutId = null;
     ui.submitBtn.disabled = true;
-    ui.startBtn.disabled = !state.playerReady;
     ui.videoWrapper.classList.remove("is-obscured");
+  }
+
+  function updateStartButton() {
+    const marathonActive = state.scope === "marathon" && state.runId;
+    ui.startBtn.disabled = !state.playerReady || marathonActive || state.playing || !hasConfig;
   }
 
   function startTimer() {
     const tick = () => {
       if (!state.playing || !state.serverStartMs) return;
       const elapsed = Date.now() - state.serverStartMs;
-      ui.timer.textContent = formatTime(elapsed);
+      ui.timer.textContent = formatTime(elapsed, 10000);
       state.rafId = requestAnimationFrame(tick);
     };
     state.rafId = requestAnimationFrame(tick);
@@ -213,68 +253,77 @@
     }
   }
 
-  function handleTimeout() {
+  async function timeoutCleanup() {
+    if (!supabaseClient || !state.attemptId) return;
+    try {
+      if (state.scope === "single") {
+        await supabaseClient.rpc("finish_single", {
+          p_attempt_id: state.attemptId,
+          p_answer_norm: "",
+          p_display_name: ""
+        });
+      } else {
+        await supabaseClient.rpc("finish_marathon_song", {
+          p_attempt_id: state.attemptId,
+          p_answer_norm: ""
+        });
+      }
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+
+  async function handleTimeout() {
     if (!state.playing) return;
     state.playing = false;
-    ui.timer.textContent = formatTime(10000);
+    ui.timer.textContent = formatTime(10000, 10000);
     ui.videoWrapper.classList.remove("is-obscured");
     ui.submitBtn.disabled = true;
-    ui.startBtn.disabled = !state.playerReady;
     stopTimer();
     setStatus("status_timeout");
     updateNowPlaying(true);
+    await timeoutCleanup();
+
+    if (state.scope === "marathon") {
+      resetRun();
+    }
+    updateProgress();
+    updateStartButton();
   }
 
-  async function startAttempt() {
-    if (!supabaseClient) {
-      setStatus("status_config");
-      return;
-    }
-    if (state.playing || !state.playerReady) return;
-
-    const selectedId = ui.songSelect.value;
-    let song = state.songs.find((s) => s.id === selectedId) || state.songs[0];
-    if (state.mode === "random") {
-      song = state.songs[Math.floor(Math.random() * state.songs.length)];
-    }
-
-    if (!song || !song.video_id || song.video_id === "VIDEO_ID_HERE") {
-      setStatus("status_error");
-      return;
-    }
-
-    state.currentSong = song;
-    updateNowPlaying(false);
-    setStatus("status_loading");
-    ui.startBtn.disabled = true;
-
-    const { data, error } = await supabaseClient.rpc("start_attempt", {
-      p_song_id: song.id,
-      p_mode: state.mode
+  async function cueVideo(videoId) {
+    if (!player) return;
+    await new Promise((resolve) => {
+      cueResolver = resolve;
+      player.cueVideoById({ videoId });
+      setTimeout(() => {
+        if (cueResolver) {
+          cueResolver();
+          cueResolver = null;
+        }
+      }, 2000);
     });
+  }
 
-    if (error || !data || !data[0]) {
-      console.error(error);
-      setStatus("status_error");
-      ui.startBtn.disabled = !state.playerReady;
-      return;
+  async function getDurationSafe() {
+    if (!player) return 0;
+    for (let i = 0; i < 20; i += 1) {
+      const duration = player.getDuration();
+      if (duration && duration > 0) return duration;
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
+    return 0;
+  }
 
-    state.attemptId = data[0].attempt_id;
-    state.serverStartMs = Date.parse(data[0].started_at);
+  function beginPlay(startSec) {
     state.playing = true;
-
     ui.videoWrapper.classList.add("is-obscured");
     ui.submitBtn.disabled = false;
     ui.answerInput.value = "";
-
     setStatus("status_playing");
 
-    if (player && song.video_id) {
-      player.loadVideoById({
-        videoId: song.video_id,
-        startSeconds: 0
-      });
+    if (player && state.currentSong?.video_id) {
+      player.seekTo(startSec || 0, true);
       player.playVideo();
     }
 
@@ -282,7 +331,9 @@
     startTimer();
 
     clearTimeout(state.timeoutId);
-    state.timeoutId = setTimeout(handleTimeout, 10000);
+    state.timeoutId = setTimeout(() => {
+      handleTimeout();
+    }, 10000);
   }
 
   function isCorrectAnswer(normalizedAnswer) {
@@ -291,25 +342,156 @@
     return answers.includes(normalizedAnswer);
   }
 
-  async function submitAnswer() {
-    if (!state.playing) return;
-    const raw = ui.answerInput.value.trim();
-    if (!raw) return;
-    const normalized = normalizeAnswer(raw);
-
-    if (!isCorrectAnswer(normalized)) {
-      setStatus("status_wrong");
-      return;
+  async function drawSingleSong() {
+    const { data, error } = await supabaseClient.rpc("draw_single_song");
+    if (error || !data || !data[0]) {
+      console.error(error);
+      setStatus("status_error");
+      return null;
     }
+    return data[0].song_id;
+  }
 
+  async function startSingle() {
     if (!supabaseClient) {
       setStatus("status_config");
       return;
     }
+    if (state.playing || !state.playerReady) return;
+
+    setStatus("status_loading");
+    ui.startBtn.disabled = true;
+
+    const songId = await drawSingleSong();
+    const song = state.songs.find((s) => s.id === songId);
+    if (!song || !song.video_id || song.video_id === "VIDEO_ID_HERE") {
+      setStatus("status_error");
+      updateStartButton();
+      return;
+    }
+
+    state.currentSong = song;
+    updateNowPlaying(false);
+    updateProgress();
+
+    await cueVideo(song.video_id);
+
+    let maxStartSec = 0;
+    if (state.mode === "random") {
+      const duration = await getDurationSafe();
+      maxStartSec = Math.max(0, Math.floor(duration) - 10);
+    }
+
+    const { data, error } = await supabaseClient.rpc("start_single", {
+      p_song_id: song.id,
+      p_mode: state.mode,
+      p_max_start_sec: maxStartSec
+    });
+
+    if (error || !data || !data[0]) {
+      console.error(error);
+      setStatus("status_error");
+      updateStartButton();
+      return;
+    }
+
+    state.attemptId = data[0].attempt_id;
+    state.serverStartMs = Date.parse(data[0].started_at);
+
+    beginPlay(data[0].start_sec || 0);
+  }
+
+  async function startMarathon() {
+    if (!supabaseClient) {
+      setStatus("status_config");
+      return;
+    }
+    if (state.playing || !state.playerReady) return;
+
+    setStatus("status_loading");
+    ui.startBtn.disabled = true;
 
     const displayName = ui.displayName.value.trim();
+    const { data, error } = await supabaseClient.rpc("start_marathon", {
+      p_mode: state.mode,
+      p_display_name: displayName
+    });
 
-    const { data, error } = await supabaseClient.rpc("finish_attempt", {
+    if (error || !data || !data[0]) {
+      console.error(error);
+      setStatus("status_error");
+      updateStartButton();
+      return;
+    }
+
+    state.runId = data[0].run_id;
+    state.runTotal = data[0].total_songs;
+    state.runPosition = data[0].current_position;
+    state.pendingSongId = data[0].song_id;
+
+    await startMarathonSong();
+  }
+
+  async function startMarathonSong() {
+    if (!state.runId || !state.pendingSongId) {
+      setStatus("status_error");
+      resetRun();
+      updateStartButton();
+      return;
+    }
+
+    const song = state.songs.find((s) => s.id === state.pendingSongId);
+    if (!song || !song.video_id || song.video_id === "VIDEO_ID_HERE") {
+      setStatus("status_error");
+      resetRun();
+      updateStartButton();
+      return;
+    }
+
+    state.currentSong = song;
+    updateNowPlaying(false);
+    updateProgress();
+
+    await cueVideo(song.video_id);
+
+    let maxStartSec = 0;
+    if (state.mode === "random") {
+      const duration = await getDurationSafe();
+      maxStartSec = Math.max(0, Math.floor(duration) - 10);
+    }
+
+    const { data, error } = await supabaseClient.rpc("start_marathon_song", {
+      p_run_id: state.runId,
+      p_max_start_sec: maxStartSec
+    });
+
+    if (error || !data || !data[0]) {
+      console.error(error);
+      setStatus("status_error");
+      resetRun();
+      updateStartButton();
+      return;
+    }
+
+    state.attemptId = data[0].attempt_id;
+    state.serverStartMs = Date.parse(data[0].started_at);
+    state.runPosition = data[0].song_pos;
+    state.runTotal = data[0].total_songs;
+
+    beginPlay(data[0].start_sec || 0);
+  }
+
+  async function startAttempt() {
+    if (state.scope === "single") {
+      await startSingle();
+    } else {
+      await startMarathon();
+    }
+  }
+
+  async function finishSingle(normalized) {
+    const displayName = ui.displayName.value.trim();
+    const { data, error } = await supabaseClient.rpc("finish_single", {
       p_attempt_id: state.attemptId,
       p_answer_norm: normalized,
       p_display_name: displayName
@@ -336,7 +518,7 @@
     clearTimeout(state.timeoutId);
     ui.videoWrapper.classList.remove("is-obscured");
     ui.submitBtn.disabled = true;
-    ui.startBtn.disabled = !state.playerReady;
+    updateStartButton();
     updateNowPlaying(true);
 
     const timeMs = result.time_ms || 0;
@@ -348,6 +530,109 @@
     await loadLeaderboard();
   }
 
+  async function finishMarathon(normalized) {
+    const { data, error } = await supabaseClient.rpc("finish_marathon_song", {
+      p_attempt_id: state.attemptId,
+      p_answer_norm: normalized
+    });
+
+    if (error || !data || !data[0]) {
+      console.error(error);
+      setStatus("status_error");
+      return;
+    }
+
+    const result = data[0];
+
+    if (result.status === "wrong") {
+      setStatus("status_wrong");
+      return;
+    }
+
+    if (result.status === "timeout" || result.status === "run_not_active") {
+      state.playing = false;
+      stopTimer();
+      clearTimeout(state.timeoutId);
+      ui.videoWrapper.classList.remove("is-obscured");
+      ui.submitBtn.disabled = true;
+      setStatus("status_failed");
+      updateNowPlaying(true);
+      resetRun();
+      updateProgress();
+      updateStartButton();
+      return;
+    }
+
+    if (result.status === "next") {
+      state.playing = false;
+      stopTimer();
+      clearTimeout(state.timeoutId);
+      ui.videoWrapper.classList.remove("is-obscured");
+      ui.submitBtn.disabled = true;
+      updateNowPlaying(true);
+
+      const timeMs = result.time_ms || 0;
+      ui.timer.textContent = formatTime(timeMs);
+      ui.timer.classList.remove("flash");
+      void ui.timer.offsetWidth;
+      ui.timer.classList.add("flash");
+      setStatus("status_next");
+
+      state.runPosition = result.next_song_pos;
+      state.pendingSongId = result.next_song_id;
+      updateProgress();
+
+      setTimeout(() => {
+        startMarathonSong();
+      }, 500);
+      return;
+    }
+
+    if (result.status === "completed") {
+      state.playing = false;
+      stopTimer();
+      clearTimeout(state.timeoutId);
+      ui.videoWrapper.classList.remove("is-obscured");
+      ui.submitBtn.disabled = true;
+      updateNowPlaying(true);
+
+      const totalMs = result.total_ms || 0;
+      ui.timer.textContent = formatTime(totalMs);
+      ui.timer.classList.remove("flash");
+      void ui.timer.offsetWidth;
+      ui.timer.classList.add("flash");
+      setStatus("status_completed");
+
+      resetRun();
+      updateProgress();
+      updateStartButton();
+      await loadLeaderboard();
+    }
+  }
+
+  async function submitAnswer() {
+    if (!state.playing) return;
+    const raw = ui.answerInput.value.trim();
+    if (!raw) return;
+    const normalized = normalizeAnswer(raw);
+
+    if (!isCorrectAnswer(normalized)) {
+      setStatus("status_wrong");
+      return;
+    }
+
+    if (!supabaseClient) {
+      setStatus("status_config");
+      return;
+    }
+
+    if (state.scope === "single") {
+      await finishSingle(normalized);
+    } else {
+      await finishMarathon(normalized);
+    }
+  }
+
   async function loadLeaderboard() {
     if (!supabaseClient) return;
     const mode = ui.rankModeSelect.value;
@@ -356,11 +641,12 @@
 
     let query = supabaseClient
       .from("leaderboard")
-      .select("rank, display_name, time_ms, song_id")
+      .select("rank, display_name, time_ms, song_id, scope")
       .eq("mode", mode)
+      .eq("scope", scope)
       .order("rank", { ascending: true });
 
-    if (scope === "song") {
+    if (scope === "single") {
       query = query.eq("song_id", songId);
     } else {
       query = query.is("song_id", null);
@@ -414,9 +700,14 @@
       if (!button) return;
       setMode(button.dataset.mode);
     });
+    ui.scopeToggle.addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button) return;
+      setScope(button.dataset.scope);
+    });
     ui.rankModeSelect.addEventListener("change", loadLeaderboard);
     ui.rankScopeSelect.addEventListener("change", () => {
-      ui.rankSongSelect.disabled = ui.rankScopeSelect.value !== "song";
+      ui.rankSongSelect.disabled = ui.rankScopeSelect.value !== "single";
       loadLeaderboard();
     });
     ui.rankSongSelect.addEventListener("change", loadLeaderboard);
@@ -444,9 +735,8 @@
     });
 
     songsLoaded = true;
-    updateSongSelects();
+    updateRankSongSelects();
     if (state.songs[0]) {
-      ui.songSelect.value = state.songs[0].id;
       ui.rankSongSelect.value = state.songs[0].id;
     }
   }
@@ -470,9 +760,15 @@
       events: {
         onReady: () => {
           state.playerReady = true;
-          ui.startBtn.disabled = !hasConfig;
+          updateStartButton();
           ui.submitBtn.disabled = true;
           setStatus(hasConfig ? "status_ready" : "status_config");
+        },
+        onStateChange: (event) => {
+          if (cueResolver && event.data === YT.PlayerState.CUED) {
+            cueResolver();
+            cueResolver = null;
+          }
         }
       }
     });
@@ -487,6 +783,8 @@
     applyTranslations();
     bindEvents();
     setMode(state.mode);
+    setScope(state.scope);
+    ui.rankSongSelect.disabled = ui.rankScopeSelect.value !== "single";
 
     try {
       await loadSongs();

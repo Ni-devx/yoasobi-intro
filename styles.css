@@ -211,6 +211,10 @@ button.ghost {
   text-transform: uppercase;
 }
 
+.video-meta .divider {
+  color: var(--border);
+}
+
 .timer-area {
   margin-top: 18px;
   text-align: center;
