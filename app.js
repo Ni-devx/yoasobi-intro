@@ -112,16 +112,21 @@
     language: navigator.language && navigator.language.startsWith("ja") ? "ja" : "en",
     currentSong: null,
     attemptId: null,
-    serverStartMs: null,
+    // FIX #2: clientStartMs はサーバーからレスポンスを受け取った瞬間のクライアント時刻を保持する
+    // serverStartMs は廃止し、clientStartMs に一本化することでサーバー/クライアントの時計ズレを回避
+    clientStartMs: null,
     runId: null,
     runPosition: 0,
     runTotal: 0,
     nextSongId: null,
-    pendingScoreId: null,
-    resultTimeMs: null,
-    resultScope: null,
-    resultMode: null,
-    resultSongId: null,
+    // FIX #7: result 系フィールドをサブオブジェクトに集約
+    result: {
+      pendingScoreId: null,
+      timeMs: null,
+      scope: null,
+      mode: null,
+      songId: null
+    },
     rafId: null,
     timeoutId: null,
     playing: false,
@@ -294,23 +299,31 @@
     state.nextSongId = null;
   }
 
-  function resetAttempt() {
-    state.attemptId = null;
-    state.serverStartMs = null;
+  // FIX #6: stopPlay() 共通関数に切り出し（finishSingle / finishMarathon / handleTimeout の重複を解消）
+  function stopPlay() {
     state.playing = false;
     stopTimer();
     clearTimeout(state.timeoutId);
     state.timeoutId = null;
-    ui.submitBtn.disabled = true;
     ui.videoWrapper.classList.remove("is-obscured");
+    ui.submitBtn.disabled = true;
   }
 
+  function resetAttempt() {
+    state.attemptId = null;
+    state.clientStartMs = null; // FIX #2
+    stopPlay();
+  }
+
+  // FIX #7: result サブオブジェクトをリセット
   function resetResult() {
-    state.pendingScoreId = null;
-    state.resultTimeMs = null;
-    state.resultScope = null;
-    state.resultMode = null;
-    state.resultSongId = null;
+    state.result = {
+      pendingScoreId: null,
+      timeMs: null,
+      scope: null,
+      mode: null,
+      songId: null
+    };
     ui.resultTime.textContent = "0.000";
     ui.resultMessage.textContent = "";
     ui.resultName.value = "";
@@ -386,8 +399,9 @@
 
   function startTimer() {
     const tick = () => {
-      if (!state.playing || !state.serverStartMs) return;
-      const elapsed = Date.now() - state.serverStartMs;
+      if (!state.playing || !state.clientStartMs) return;
+      // FIX #2: サーバー時刻との比較をやめ、clientStartMs（レスポンス受信時のクライアント時刻）を基準に計測
+      const elapsed = Date.now() - state.clientStartMs;
       ui.timer.textContent = formatTime(elapsed, 10000);
       state.rafId = requestAnimationFrame(tick);
     };
@@ -411,10 +425,10 @@
     if (!supabaseClient || !state.attemptId) return;
     try {
       if (state.scope === "single") {
+        // FIX #3: 不要な p_display_name 引数を削除
         await supabaseClient.rpc("finish_single", {
           p_attempt_id: state.attemptId,
-          p_answer_norm: "",
-          p_display_name: ""
+          p_answer_norm: ""
         });
       } else {
         await supabaseClient.rpc("finish_marathon_song", {
@@ -429,11 +443,8 @@
 
   async function handleTimeout() {
     if (!state.playing) return;
-    state.playing = false;
     ui.timer.textContent = formatTime(10000, 10000);
-    ui.videoWrapper.classList.remove("is-obscured");
-    ui.submitBtn.disabled = true;
-    stopTimer();
+    stopPlay(); // FIX #6: 共通関数を使用
     setStatus("status_timeout");
     updateNowPlaying(true);
     await cleanupTimeout();
@@ -448,12 +459,13 @@
     await new Promise((resolve) => {
       cueResolver = resolve;
       player.cueVideoById({ videoId });
+      // FIX #5: フォールバックを 2000ms → 5000ms に延長して低速回線でも動画準備を待つ
       setTimeout(() => {
         if (cueResolver) {
           cueResolver();
           cueResolver = null;
         }
-      }, 2000);
+      }, 5000);
     });
   }
 
@@ -469,6 +481,8 @@
 
   function beginPlay(startSec) {
     state.playing = true;
+    // FIX #2: サーバー時刻との比較をやめ、ここでクライアント時刻を記録してタイマー基準とする
+    state.clientStartMs = Date.now();
     ui.videoWrapper.classList.add("is-obscured");
     ui.submitBtn.disabled = false;
     populateAnswerSelect();
@@ -551,8 +565,7 @@
     }
 
     state.attemptId = data[0].attempt_id;
-    state.serverStartMs = Date.parse(data[0].started_at);
-
+    // FIX #2: serverStartMs は使わない。beginPlay() 内で clientStartMs を記録する
     beginPlay(data[0].start_sec || 0);
   }
 
@@ -638,7 +651,7 @@
     }
 
     state.attemptId = data[0].attempt_id;
-    state.serverStartMs = Date.parse(data[0].started_at);
+    // FIX #2: serverStartMs は使わない。beginPlay() 内で clientStartMs を記録する
     state.runPosition = data[0].song_pos;
     state.runTotal = data[0].total_songs;
 
@@ -659,10 +672,10 @@
   }
 
   async function finishSingle(normalized) {
+    // FIX #3: 不要な p_display_name 引数を削除
     const { data, error } = await supabaseClient.rpc("finish_single", {
       p_attempt_id: state.attemptId,
-      p_answer_norm: normalized,
-      p_display_name: ""
+      p_answer_norm: normalized
     });
 
     if (error || !data || !data[0]) {
@@ -681,19 +694,16 @@
       return;
     }
 
-    state.playing = false;
-    stopTimer();
-    clearTimeout(state.timeoutId);
-    ui.videoWrapper.classList.remove("is-obscured");
-    ui.submitBtn.disabled = true;
+    stopPlay(); // FIX #6: 共通関数を使用
     updateNowPlaying(true);
 
     const timeMs = result.time_ms || 0;
-    state.pendingScoreId = result.pending_id;
-    state.resultTimeMs = timeMs;
-    state.resultScope = "single";
-    state.resultMode = state.mode;
-    state.resultSongId = state.currentSong?.id || null;
+    // FIX #7: result サブオブジェクトに集約
+    state.result.pendingScoreId = result.pending_id;
+    state.result.timeMs = timeMs;
+    state.result.scope = "single";
+    state.result.mode = state.mode;
+    state.result.songId = state.currentSong?.id || null;
 
     showResult(true, timeMs);
   }
@@ -713,11 +723,7 @@
     const result = data[0];
 
     if (result.status === "wrong") {
-      state.playing = false;
-      stopTimer();
-      clearTimeout(state.timeoutId);
-      ui.videoWrapper.classList.remove("is-obscured");
-      ui.submitBtn.disabled = true;
+      stopPlay(); // FIX #6
       setStatus("status_failed");
       updateNowPlaying(true);
       resetRun();
@@ -727,11 +733,7 @@
     }
 
     if (result.status === "timeout" || result.status === "run_not_active") {
-      state.playing = false;
-      stopTimer();
-      clearTimeout(state.timeoutId);
-      ui.videoWrapper.classList.remove("is-obscured");
-      ui.submitBtn.disabled = true;
+      stopPlay(); // FIX #6
       setStatus("status_failed");
       updateNowPlaying(true);
       resetRun();
@@ -741,11 +743,7 @@
     }
 
     if (result.status === "next") {
-      state.playing = false;
-      stopTimer();
-      clearTimeout(state.timeoutId);
-      ui.videoWrapper.classList.remove("is-obscured");
-      ui.submitBtn.disabled = true;
+      stopPlay(); // FIX #6
       updateNowPlaying(true);
 
       const timeMs = result.time_ms || 0;
@@ -766,19 +764,16 @@
     }
 
     if (result.status === "completed") {
-      state.playing = false;
-      stopTimer();
-      clearTimeout(state.timeoutId);
-      ui.videoWrapper.classList.remove("is-obscured");
-      ui.submitBtn.disabled = true;
+      stopPlay(); // FIX #6
       updateNowPlaying(true);
 
       const totalMs = result.total_ms || 0;
-      state.pendingScoreId = result.pending_id;
-      state.resultTimeMs = totalMs;
-      state.resultScope = "marathon";
-      state.resultMode = state.mode;
-      state.resultSongId = null;
+      // FIX #7: result サブオブジェクトに集約
+      state.result.pendingScoreId = result.pending_id;
+      state.result.timeMs = totalMs;
+      state.result.scope = "marathon";
+      state.result.mode = state.mode;
+      state.result.songId = null;
 
       resetRun();
       updateProgress();
@@ -790,22 +785,21 @@
     if (!state.playing) return;
     const selectedId = ui.answerSelect.value;
     if (!selectedId) return;
-    const selectedOption = ui.answerSelect.selectedOptions[0];
-    const selectedSong = state.songs.find((song) => song.id === selectedId);
-    const normalized = selectedOption?.dataset?.answer || getAnswerNormForSong(selectedSong);
 
     if (!supabaseClient) {
       setStatus("status_config");
       return;
     }
 
+    // FIX #1: クライアント側での答え合わせを廃止。
+    // サーバー（finish_single / finish_marathon_song）が answers_normalized で正誤を判定するので
+    // ここでは選択された曲の正規化済み答えをそのまま送るだけでよい。
+    const selectedOption = ui.answerSelect.selectedOptions[0];
+    const selectedSong = state.songs.find((song) => song.id === selectedId);
+    const normalized = selectedOption?.dataset?.answer || getAnswerNormForSong(selectedSong);
+
     if (state.scope === "marathon") {
       await finishMarathon(normalized);
-      return;
-    }
-
-    if (!selectedSong || selectedSong.id !== state.currentSong?.id) {
-      setStatus("status_wrong");
       return;
     }
 
@@ -904,20 +898,21 @@
     ui.resultTime.textContent = formatTime(timeMs);
     ui.resultMessage.textContent = i18n[state.language].status_correct;
 
-    if (state.pendingScoreId) {
+    // FIX #7: state.result サブオブジェクトを参照
+    if (state.result.pendingScoreId) {
       ui.saveBlock.classList.remove("hidden");
     } else {
       ui.saveBlock.classList.add("hidden");
-      state.pendingScoreId = null;
       ui.resultMessage.textContent = i18n[state.language].status_not_qualified;
     }
   }
 
   async function submitScore() {
-    if (!state.pendingScoreId) return;
+    // FIX #7: state.result サブオブジェクトを参照
+    if (!state.result.pendingScoreId) return;
     const name = ui.resultName.value.trim();
     const { data, error } = await supabaseClient.rpc("submit_score", {
-      p_pending_id: state.pendingScoreId,
+      p_pending_id: state.result.pendingScoreId,
       p_display_name: name
     });
 
@@ -929,7 +924,7 @@
 
     ui.resultMessage.textContent = i18n[state.language].status_saved;
     ui.saveBlock.classList.add("hidden");
-    state.pendingScoreId = null;
+    state.result.pendingScoreId = null;
     await loadSetupLeaderboard();
     await loadRankingLeaderboard();
   }
