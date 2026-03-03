@@ -596,7 +596,6 @@ button.ghost--sm {
   color: var(--muted);
   font-size: 11px;
   letter-spacing: 0.04em;
-  border-top: 1px solid var(--border);
   text-align: center;
 }
 
