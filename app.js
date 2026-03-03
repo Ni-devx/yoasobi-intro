@@ -138,6 +138,7 @@
     selectedSong: null,   // インクリメンタルサーチで選択中の曲
     searchActiveIndex: -1, // キーボードで選択中のリスト位置
     playing: false,
+    submitting: false, // 二重送信防止フラグ
     playerReady: false,
     statusKey: hasConfig ? "status_ready" : "status_config",
     view: "home"
@@ -320,6 +321,7 @@
   // FIX #6: stopPlay() 共通関数に切り出し（finishSingle / finishMarathon / handleTimeout の重複を解消）
   function stopPlay() {
     state.playing = false;
+    state.submitting = false;
     stopTimer();
     clearTimeout(state.timeoutId);
     state.timeoutId = null;
@@ -869,6 +871,14 @@
 
   async function submitAnswer() {
     if (!state.playing) return;
+    if (!state.attemptId) {
+      console.warn("submitAnswer: attemptId is null, skipping");
+      return;
+    }
+    if (state.submitting) {
+      console.warn("submitAnswer: already submitting, skipping double submission");
+      return;
+    }
     const song = state.selectedSong;
     if (!song) return;
 
@@ -877,14 +887,17 @@
       return;
     }
 
+    state.submitting = true;
     const normalized = getAnswerNormForSong(song);
 
     if (state.scope === "marathon") {
       await finishMarathon(normalized);
+      state.submitting = false;
       return;
     }
 
     await finishSingle(normalized);
+    state.submitting = false;
   }
 
   function renderLeaderboardRows(rows, container) {
