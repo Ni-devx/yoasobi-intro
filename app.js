@@ -53,7 +53,7 @@
       status_not_qualified: "Top30外でした",
       next_song: "次の曲へ →",
       cancel_game: "キャンセル",
-      reload_video: "↺ 動画を再ロード（広告が流れている場合）",
+      reload_video: "↺ 動画を再ロード（広告中） [R]",
       hidden: "非表示"
     },
     en: {
@@ -106,7 +106,7 @@
       status_not_qualified: "Not in Top 30",
       next_song: "Next Song →",
       cancel_game: "Cancel",
-      reload_video: "↺ Reload video (if an ad is playing)",
+      reload_video: "↺ Reload video (if an ad is playing) [R]",
       hidden: "Hidden"
     }
   };
@@ -1117,14 +1117,26 @@
       showView("home");
     });
 
-    // 広告が流れているときに動画を再ロードするボタン
+    // 広告が流れているときに動画を再ロードする処理
     // IFrame API には広告スキップメソッドがないため、動画を再キューして再試行する
-    ui.reloadVideoBtn.addEventListener("click", async () => {
+    const reloadVideo = async () => {
       if (!state.currentSong || !player) return;
       stopPlay();
       ui.videoWrapper.classList.add("is-obscured");
       await cueVideo(state.currentSong.video_id);
       beginPlay(state.startSec);
+    };
+    ui.reloadVideoBtn.addEventListener("click", reloadVideo);
+
+    // R キーで動画再ロード（広告スキップ用）
+    // 答え入力欄にフォーカス中は誤発火しないようスキップ
+    document.addEventListener("keydown", (e) => {
+      if (!state.playing) return;
+      if (document.activeElement === ui.answerInput) return;
+      if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        reloadVideo();
+      }
     });
 
     ui.langToggle.addEventListener("click", () => {
