@@ -53,6 +53,7 @@
       status_not_qualified: "Top30外でした",
       next_song: "次の曲へ →",
       cancel_game: "キャンセル",
+      reload_video: "↺ 動画を再ロード（広告が流れている場合）",
       hidden: "非表示"
     },
     en: {
@@ -105,6 +106,7 @@
       status_not_qualified: "Not in Top 30",
       next_song: "Next Song →",
       cancel_game: "Cancel",
+      reload_video: "↺ Reload video (if an ad is playing)",
       hidden: "Hidden"
     }
   };
@@ -129,6 +131,7 @@
       songId: null
     },
     timeoutId: null,
+    songTimes: [],     // marathon: 曲ごとのタイム(ms)を蓄積
     selectedSong: null,   // インクリメンタルサーチで選択中の曲
     searchActiveIndex: -1, // キーボードで選択中のリスト位置
     playing: false,
@@ -182,7 +185,9 @@
     langToggle: document.getElementById("lang-toggle"),
     nextArea: document.getElementById("quiz-next"),
     nextBtn: document.getElementById("next-btn"),
-    cancelBtn: document.getElementById("cancel-btn")
+    cancelBtn: document.getElementById("cancel-btn"),
+    songTimeDisplay: document.getElementById("song-time-display"),
+    reloadVideoBtn: document.getElementById("reload-video-btn")
   };
 
   const supabaseClient = hasConfig && window.supabase
@@ -313,6 +318,7 @@
     state.runPosition = 0;
     state.runTotal = 0;
     state.nextSongId = null;
+    state.songTimes = [];
   }
 
   function stopPlay() {
@@ -359,6 +365,7 @@
       closeSearch();
       ui.answerInput.value = "";
       ui.nextArea.classList.add("hidden");
+      ui.songTimeDisplay.textContent = "";
       ui.quizAnswer.style.display = "";
       state.selectedSong = null;
       state.searchActiveIndex = -1;
@@ -466,20 +473,22 @@
   }
   // ────────────────────────────────────────────────────────────
 
-  // 広告時間を除いた経過時間をミリ秒で返す
-  // getCurrentTime() は広告中・バッファリング中は本編位置が進まないため自然に補正される
+  // 経過時間をミリ秒で返す
+  // Intro: getCurrentTime() - 0、Random: getCurrentTime() - startSec
+  // 広告中・バッファリング中は本編の getCurrentTime() が進まないため自然に停止する
   function getElapsedMs() {
     if (!player) return 1;
     const elapsed = (player.getCurrentTime() - state.startSec) * 1000;
     return Math.max(1, Math.round(elapsed));
   }
 
-  // タイムアウト監視を開始（setIntervalでgetCurrentTime()をポーリング）
+  // タイムアウト監視（setInterval で 100ms ごとにポーリング）
+  // 広告中は本編の getCurrentTime() が進まないため 10 秒カウントも止まる
   function startTimeoutWatch() {
     if (state.timeoutId) clearInterval(state.timeoutId);
     state.timeoutId = setInterval(() => {
       if (!state.playing) return;
-      const elapsed = (player.getCurrentTime() - state.startSec);
+      const elapsed = player.getCurrentTime() - state.startSec;
       if (elapsed >= 10) {
         clearInterval(state.timeoutId);
         state.timeoutId = null;
@@ -686,6 +695,7 @@
     ui.videoWrapper.classList.add("is-obscured");
     // next-area を隠して answer-area を再表示
     ui.nextArea.classList.add("hidden");
+    ui.songTimeDisplay.textContent = "";
     setQuizActive(true);
     await cueVideo(song.video_id);
 
@@ -790,6 +800,11 @@
       stopPlay();
       updateNowPlaying(true);
 
+      // 曲ごとのタイムを記録
+      state.songTimes.push(clientTimeMs);
+      const pos = state.runPosition; // まだ更新前の現在曲番号
+      ui.songTimeDisplay.textContent = `#${pos}  ${formatTime(clientTimeMs)}`;
+
       setStatus("status_next");
 
       state.runPosition = result.next_song_pos;
@@ -807,7 +822,10 @@
       stopPlay();
       updateNowPlaying(true);
 
-      const totalMs = result.total_ms || 0;
+      // 最後の曲のタイムを記録してクライアント側で合計を計算
+      state.songTimes.push(clientTimeMs);
+      const totalMs = state.songTimes.reduce((sum, t) => sum + t, 0);
+
       state.result.pendingScoreId = result.score_id;
       state.result.timeMs = totalMs;
       state.result.scope = "marathon";
@@ -1097,6 +1115,16 @@
       stopPlayer();
       setQuizActive(false);
       showView("home");
+    });
+
+    // 広告が流れているときに動画を再ロードするボタン
+    // IFrame API には広告スキップメソッドがないため、動画を再キューして再試行する
+    ui.reloadVideoBtn.addEventListener("click", async () => {
+      if (!state.currentSong || !player) return;
+      stopPlay();
+      ui.videoWrapper.classList.add("is-obscured");
+      await cueVideo(state.currentSong.video_id);
+      beginPlay(state.startSec);
     });
 
     ui.langToggle.addEventListener("click", () => {

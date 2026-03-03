@@ -627,3 +627,29 @@ button.ghost--sm {
 
   .search-list { max-height: 200px; }
 }
+/* 全曲モード：曲ごとのタイム表示 */
+.song-time-display {
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  min-height: 1.8em;
+  text-align: center;
+}
+
+/* 広告再ロードエリア */
+.ad-reload-area {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 0;
+}
+
+.ad-reload-area .ghost--sm {
+  font-size: 0.75rem;
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+
+.ad-reload-area .ghost--sm:hover {
+  opacity: 1;
+}
