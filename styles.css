@@ -36,17 +36,18 @@
 body {
   font-family: var(--font-body);
   font-size: 14px;
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   background-image:
-    linear-gradient(rgba(247,245,242,0.82), rgba(247,245,242,0.82)),
-    url('bg.png');
+    linear-gradient(rgba(247,245,242,0.88), rgba(247,245,242,0.88)),
+    url('bg.webp');
   background-size: cover;
-  background-position: center;
-  background-attachment: fixed;}
+  background-position: center top;
+  background-attachment: fixed;
+}
 
 /* ─────────────────────────────────────────
    home-only
