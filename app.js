@@ -529,13 +529,20 @@
     }
   }
 
+  // 広告時間を除いたクライアント計測タイムを返す（ミリ秒）
+  function getClientElapsedMs() {
+    if (!state.clientStartMs) return 1;
+    const ongoingAdMs = state.adPauseStart ? (Date.now() - state.adPauseStart) : 0;
+    return Math.max(1, Date.now() - state.clientStartMs - state.adPausedMs - ongoingAdMs);
+  }
+
   async function cleanupTimeout() {
     if (!supabaseClient || !state.attemptId) return;
     try {
-      // finish_attempt は single/marathon 共通
       await supabaseClient.rpc("finish_attempt", {
         p_attempt_id: state.attemptId,
-        p_answer_norm: ""
+        p_answer_norm: "",
+        p_time_ms: 10000
       });
     } catch (error) {
       console.warn(error);
@@ -771,9 +778,11 @@
   }
 
   async function finishSingle(normalized) {
+    const clientTimeMs = getClientElapsedMs();
     const { data, error } = await supabaseClient.rpc("finish_attempt", {
       p_attempt_id: state.attemptId,
-      p_answer_norm: normalized
+      p_answer_norm: normalized,
+      p_time_ms: clientTimeMs
     });
 
     if (error || !data || !data[0]) {
@@ -784,10 +793,6 @@
 
     const result = data[0];
     if (result.status !== "ok") {
-      if (result.status === "timeout") {
-        await handleTimeout();
-        return;
-      }
       setStatus("status_wrong");
       return;
     }
@@ -795,7 +800,7 @@
     stopPlay();
     updateNowPlaying(true);
 
-    const timeMs = result.time_ms || 0;
+    const timeMs = result.song_time_ms || clientTimeMs;
     state.result.pendingScoreId = result.score_id;
     state.result.timeMs = timeMs;
     state.result.scope = "single";
@@ -806,9 +811,11 @@
   }
 
   async function finishMarathon(normalized) {
+    const clientTimeMs = getClientElapsedMs();
     const { data, error } = await supabaseClient.rpc("finish_attempt", {
       p_attempt_id: state.attemptId,
-      p_answer_norm: normalized
+      p_answer_norm: normalized,
+      p_time_ms: clientTimeMs
     });
 
     if (error || !data || !data[0]) {
@@ -819,7 +826,7 @@
 
     const result = data[0];
 
-    if (result.status === "wrong" || result.status === "timeout") {
+    if (result.status === "wrong") {
       stopPlay();
       setStatus("status_failed");
       updateNowPlaying(true);
@@ -833,7 +840,7 @@
       stopPlay();
       updateNowPlaying(true);
 
-      const timeMs = result.time_ms || 0;
+      const timeMs = result.song_time_ms || clientTimeMs;
       ui.timer.textContent = formatTime(timeMs);
       ui.timer.classList.remove("flash");
       void ui.timer.offsetWidth;
@@ -844,7 +851,6 @@
       state.nextSongId = result.next_song_id;
       updateProgress();
 
-      // 自動遷移をやめてNextボタンを表示
       closeSearch();
       ui.answerInput.value = "";
       ui.quizAnswer.style.display = "none";

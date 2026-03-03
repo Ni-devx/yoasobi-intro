@@ -379,3 +379,173 @@ grant execute on function public.start_attempt(text,text,uuid,integer) to anon, 
 grant execute on function public.finish_attempt(uuid,text)             to anon, authenticated;
 grant execute on function public.start_marathon(text)                  to anon, authenticated;
 grant execute on function public.submit_score(uuid,text)               to anon, authenticated;
+
+-- ============================================================
+-- finish_attempt の再構築
+-- タイム計測をクライアント側に移管し、広告時間を除外可能にする
+-- また "column reference time_ms is ambiguous" (42702) を修正
+-- ============================================================
+
+-- 旧バージョンを削除（シグネチャが変わるため）
+drop function if exists public.finish_attempt(uuid, text) cascade;
+
+-- ------------------------------------------------------------
+-- finish_attempt: シングル・マラソン共通の回答処理
+--   p_time_ms: クライアント計測タイム（広告時間除外済み・ミリ秒）
+--
+--   返値:
+--     status        — ok / wrong / invalid_attempt
+--                     next (marathon途中) / completed (marathon完走)
+--     time_ms       — 今回の曲のタイム（クライアント計測値）
+--     next_song_id  — 次曲ID        (marathon:next のみ)
+--     next_song_pos — 次曲の位置    (marathon:next のみ)
+--     total_ms      — 合計タイム    (marathon:completed のみ)
+--     score_id      — Top30入りなら pending スコアID、それ以外 null
+-- ------------------------------------------------------------
+create or replace function public.finish_attempt(
+  p_attempt_id  uuid,
+  p_answer_norm text,
+  p_time_ms     integer   -- クライアント計測タイム（広告除外済み）
+)
+returns table (
+  status        text,
+  song_time_ms  integer,  -- 曲ごとのタイム（"time_ms" との名前衝突を回避）
+  next_song_id  text,
+  next_song_pos integer,
+  total_ms      integer,
+  score_id      uuid
+)
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_attempt       public.attempts%rowtype;
+  v_run           public.marathon_runs%rowtype;
+  v_correct       boolean;
+  v_next_pos      integer;
+  v_total_ms      integer;
+  v_30th_ms       integer;
+  v_score_id      uuid;
+  v_clamped_ms    integer;  -- スコア保存用タイム（1〜10000にクランプ）
+begin
+  -- アテンプト取得
+  select * into v_attempt from public.attempts where id = p_attempt_id;
+  if not found then
+    return query select
+      'invalid_attempt'::text, null::integer, null::text,
+      null::integer, null::integer, null::uuid;
+    return;
+  end if;
+
+  -- タイム検証（1ms未満は不正、シングルは10秒上限）
+  if p_time_ms is null or p_time_ms < 1 then
+    return query select
+      'invalid_attempt'::text, null::integer, null::text,
+      null::integer, null::integer, null::uuid;
+    return;
+  end if;
+
+  -- シングルはクライアント側で10秒を超えた場合もタイムアウト扱い
+  if v_attempt.scope = 'single' and p_time_ms > 10000 then
+    delete from public.attempts where id = p_attempt_id;
+    return query select
+      'wrong'::text, null::integer, null::text,
+      null::integer, null::integer, null::uuid;
+    return;
+  end if;
+
+  -- スコア保存用タイムをクランプ（念のため上限保護）
+  v_clamped_ms := greatest(1, least(p_time_ms, 10000));
+
+  -- 回答検証
+  select (p_answer_norm = any(s.answers_normalized))
+  into v_correct
+  from public.songs s
+  where s.id = v_attempt.song_id;
+
+  if not v_correct then
+    if v_attempt.scope = 'marathon' then
+      update public.marathon_runs
+      set status = 'failed'
+      where id = v_attempt.run_id;
+    end if;
+    delete from public.attempts where id = p_attempt_id;
+    return query select
+      'wrong'::text, null::integer, null::text,
+      null::integer, null::integer, null::uuid;
+    return;
+  end if;
+
+  delete from public.attempts where id = p_attempt_id;
+
+  -- ── シングルモード ──────────────────────────────────────
+  if v_attempt.scope = 'single' then
+    select sc.time_ms into v_30th_ms
+    from public.scores sc
+    where sc.scope = 'single'
+      and sc.mode = v_attempt.mode
+      and sc.song_id = v_attempt.song_id
+      and sc.confirmed = true
+    order by sc.time_ms asc
+    limit 1 offset 29;
+
+    if v_30th_ms is null or v_clamped_ms < v_30th_ms then
+      insert into public.scores (scope, mode, song_id, time_ms)
+      values ('single', v_attempt.mode, v_attempt.song_id, v_clamped_ms)
+      returning id into v_score_id;
+    end if;
+
+    return query select
+      'ok'::text, v_clamped_ms, null::text,
+      null::integer, null::integer, v_score_id;
+    return;
+  end if;
+
+  -- ── マラソンモード ─────────────────────────────────────
+  select * into v_run from public.marathon_runs where id = v_attempt.run_id;
+  v_next_pos := v_attempt.song_pos + 1;
+
+  if v_next_pos > v_run.total_songs then
+    -- 全曲完走
+    v_total_ms := v_run.total_ms_so_far + v_clamped_ms;
+    update public.marathon_runs
+    set status          = 'completed',
+        current_pos     = v_next_pos,
+        total_ms_so_far = v_total_ms
+    where id = v_run.id;
+
+    select sc.time_ms into v_30th_ms
+    from public.scores sc
+    where sc.scope = 'marathon'
+      and sc.mode = v_run.mode
+      and sc.song_id is null
+      and sc.confirmed = true
+    order by sc.time_ms asc
+    limit 1 offset 29;
+
+    if v_30th_ms is null or v_total_ms < v_30th_ms then
+      insert into public.scores (scope, mode, song_id, time_ms)
+      values ('marathon', v_run.mode, null, v_total_ms)
+      returning id into v_score_id;
+    end if;
+
+    return query select
+      'completed'::text, v_clamped_ms, null::text,
+      null::integer, v_total_ms, v_score_id;
+    return;
+  end if;
+
+  -- 途中: 累積タイムと現在位置を更新して次の曲を返す
+  update public.marathon_runs
+  set current_pos     = v_next_pos,
+      total_ms_so_far = total_ms_so_far + v_clamped_ms
+  where id = v_run.id;
+
+  return query select
+    'next'::text, v_clamped_ms,
+    v_run.song_order[v_next_pos], v_next_pos,
+    null::integer, null::uuid;
+end;
+$$;
+
+-- 権限付与（新シグネチャ）
+grant execute on function public.finish_attempt(uuid, text, integer) to anon, authenticated;
