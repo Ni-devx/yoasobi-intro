@@ -304,6 +304,19 @@ button.ghost {
 .timer-area {
   margin-top: 18px;
   text-align: center;
+  position: relative;
+}
+
+.cancel-btn {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  border-color: transparent;
+}
+
+.cancel-btn:hover {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .timer {

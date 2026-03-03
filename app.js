@@ -52,6 +52,7 @@
       status_saved: "記録を保存しました",
       status_not_qualified: "Top30外でした",
       next_song: "次の曲へ →",
+      cancel_game: "キャンセル",
       hidden: "非表示"
     },
     en: {
@@ -103,6 +104,7 @@
       status_saved: "Score saved",
       status_not_qualified: "Not in Top 30",
       next_song: "Next Song →",
+      cancel_game: "Cancel",
       hidden: "Hidden"
     }
   };
@@ -182,7 +184,8 @@
     videoWrapper: document.getElementById("video-wrapper"),
     langToggle: document.getElementById("lang-toggle"),
     nextArea: document.getElementById("quiz-next"),
-    nextBtn: document.getElementById("next-btn")
+    nextBtn: document.getElementById("next-btn"),
+    cancelBtn: document.getElementById("cancel-btn")
   };
 
   const supabaseClient = hasConfig && window.supabase
@@ -348,6 +351,7 @@
 
   function setQuizActive(active) {
     ui.playerPanel.classList.toggle("play-active", active);
+    ui.cancelBtn.classList.toggle("hidden", !active);
     if (active) {
       ui.quizAnswer.style.display = "";
     } else {
@@ -1079,6 +1083,17 @@
     ui.nextBtn.addEventListener("click", () => {
       ui.nextArea.classList.add("hidden");
       startMarathonSong();
+    });
+
+    ui.cancelBtn.addEventListener("click", async () => {
+      // 計測中のアテンプトをサーバー側でキャンセル（タイムアウト扱い）
+      await cleanupTimeout();
+      stopPlay();
+      resetAttempt();
+      resetRun();
+      stopPlayer();
+      setQuizActive(false);
+      showView("home");
     });
 
     ui.langToggle.addEventListener("click", () => {
