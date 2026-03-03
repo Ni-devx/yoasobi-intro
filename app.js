@@ -133,6 +133,8 @@
     },
     rafId: null,
     timeoutId: null,
+    adPausedMs: 0,      // 広告で一時停止した累計ミリ秒
+    adPauseStart: null, // 現在の広告一時停止の開始時刻
     selectedSong: null,   // インクリメンタルサーチで選択中の曲
     searchActiveIndex: -1, // キーボードで選択中のリスト位置
     playing: false,
@@ -465,12 +467,48 @@
   }
   // ────────────────────────────────────────────────────────────
 
+  // 広告再生中かどうかを判定する
+  // getVideoData().video_id が currentSong の video_id と一致しない場合は広告と見なす
+  function isAdPlaying() {
+    if (!player || !state.currentSong) return false;
+    try {
+      const videoData = player.getVideoData();
+      const currentId = videoData?.video_id;
+      return !currentId || currentId !== state.currentSong.video_id;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function startTimer() {
     const tick = () => {
       if (!state.playing || !state.clientStartMs) return;
-      // FIX #2: サーバー時刻との比較をやめ、clientStartMs（レスポンス受信時のクライアント時刻）を基準に計測
-      const elapsed = Date.now() - state.clientStartMs;
+
+      // 広告状態の変化を検知して累計一時停止時間を更新
+      const ad = isAdPlaying();
+      if (ad && state.adPauseStart === null) {
+        // 広告が始まった
+        state.adPauseStart = Date.now();
+      } else if (!ad && state.adPauseStart !== null) {
+        // 広告が終わった → 累計に加算
+        state.adPausedMs += Date.now() - state.adPauseStart;
+        state.adPauseStart = null;
+      }
+
+      // 現在進行中の広告分（まだ終わっていない）
+      const ongoingAdMs = state.adPauseStart ? (Date.now() - state.adPauseStart) : 0;
+      // 広告時間を除いた実効経過時間
+      const elapsed = Date.now() - state.clientStartMs - state.adPausedMs - ongoingAdMs;
+
       ui.timer.textContent = formatTime(elapsed, 10000);
+
+      // タイムアウト判定（10秒）
+      if (elapsed >= 10000) {
+        stopTimer();
+        handleTimeout();
+        return;
+      }
+
       state.rafId = requestAnimationFrame(tick);
     };
     state.rafId = requestAnimationFrame(tick);
@@ -543,6 +581,8 @@
   function beginPlay(startSec) {
     state.playing = true;
     state.clientStartMs = Date.now();
+    state.adPausedMs = 0;
+    state.adPauseStart = null;
     state.selectedSong = null;
     ui.videoWrapper.classList.add("is-obscured");
     setStatus("status_playing");
@@ -560,10 +600,9 @@
     ui.timer.textContent = "0.000";
     startTimer();
 
+    // タイムアウトは startTimer 内の RAF ループで管理するため setTimeout は不要
     clearTimeout(state.timeoutId);
-    state.timeoutId = setTimeout(() => {
-      handleTimeout();
-    }, 10000);
+    state.timeoutId = null;
   }
 
   async function startSingle() {
