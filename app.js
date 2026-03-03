@@ -116,14 +116,11 @@
     language: navigator.language && navigator.language.startsWith("ja") ? "ja" : "en",
     currentSong: null,
     attemptId: null,
-    // FIX #2: clientStartMs はサーバーからレスポンスを受け取った瞬間のクライアント時刻を保持する
-    // serverStartMs は廃止し、clientStartMs に一本化することでサーバー/クライアントの時計ズレを回避
-    clientStartMs: null,
+    startSec: 0,        // 再生開始位置（秒）。Intro=0、Randomは任意
     runId: null,
     runPosition: 0,
     runTotal: 0,
     nextSongId: null,
-    // FIX #7: result 系フィールドをサブオブジェクトに集約
     result: {
       pendingScoreId: null,
       timeMs: null,
@@ -131,10 +128,7 @@
       mode: null,
       songId: null
     },
-    rafId: null,
     timeoutId: null,
-    adPausedMs: 0,      // 広告で一時停止した累計ミリ秒
-    adPauseStart: null, // 現在の広告一時停止の開始時刻
     selectedSong: null,   // インクリメンタルサーチで選択中の曲
     searchActiveIndex: -1, // キーボードで選択中のリスト位置
     playing: false,
@@ -321,19 +315,19 @@
     state.nextSongId = null;
   }
 
-  // FIX #6: stopPlay() 共通関数に切り出し（finishSingle / finishMarathon / handleTimeout の重複を解消）
   function stopPlay() {
     state.playing = false;
     state.submitting = false;
-    stopTimer();
-    clearTimeout(state.timeoutId);
-    state.timeoutId = null;
+    if (state.timeoutId) {
+      clearInterval(state.timeoutId);
+      state.timeoutId = null;
+    }
     ui.videoWrapper.classList.remove("is-obscured");
   }
 
   function resetAttempt() {
     state.attemptId = null;
-    state.clientStartMs = null; // FIX #2
+    state.startSec = 0;
     stopPlay();
   }
 
@@ -472,71 +466,32 @@
   }
   // ────────────────────────────────────────────────────────────
 
-  // 広告再生中かどうかを判定する
-  // getVideoData().video_id が currentSong の video_id と一致しない場合は広告と見なす
-  function isAdPlaying() {
-    if (!player || !state.currentSong) return false;
-    try {
-      const videoData = player.getVideoData();
-      const currentId = videoData?.video_id;
-      return !currentId || currentId !== state.currentSong.video_id;
-    } catch (e) {
-      return false;
-    }
+  // 広告時間を除いた経過時間をミリ秒で返す
+  // getCurrentTime() は広告中・バッファリング中は本編位置が進まないため自然に補正される
+  function getElapsedMs() {
+    if (!player) return 1;
+    const elapsed = (player.getCurrentTime() - state.startSec) * 1000;
+    return Math.max(1, Math.round(elapsed));
   }
 
-  function startTimer() {
-    const tick = () => {
-      if (!state.playing || !state.clientStartMs) return;
-
-      // 広告状態の変化を検知して累計一時停止時間を更新
-      const ad = isAdPlaying();
-      if (ad && state.adPauseStart === null) {
-        // 広告が始まった
-        state.adPauseStart = Date.now();
-      } else if (!ad && state.adPauseStart !== null) {
-        // 広告が終わった → 累計に加算
-        state.adPausedMs += Date.now() - state.adPauseStart;
-        state.adPauseStart = null;
-      }
-
-      // 現在進行中の広告分（まだ終わっていない）
-      const ongoingAdMs = state.adPauseStart ? (Date.now() - state.adPauseStart) : 0;
-      // 広告時間を除いた実効経過時間
-      const elapsed = Date.now() - state.clientStartMs - state.adPausedMs - ongoingAdMs;
-
-      ui.timer.textContent = formatTime(elapsed, 10000);
-
-      // タイムアウト判定（10秒）
-      if (elapsed >= 10000) {
-        stopTimer();
+  // タイムアウト監視を開始（setIntervalでgetCurrentTime()をポーリング）
+  function startTimeoutWatch() {
+    if (state.timeoutId) clearInterval(state.timeoutId);
+    state.timeoutId = setInterval(() => {
+      if (!state.playing) return;
+      const elapsed = (player.getCurrentTime() - state.startSec);
+      if (elapsed >= 10) {
+        clearInterval(state.timeoutId);
+        state.timeoutId = null;
         handleTimeout();
-        return;
       }
-
-      state.rafId = requestAnimationFrame(tick);
-    };
-    state.rafId = requestAnimationFrame(tick);
-  }
-
-  function stopTimer() {
-    if (state.rafId) {
-      cancelAnimationFrame(state.rafId);
-      state.rafId = null;
-    }
+    }, 100);
   }
 
   function stopPlayer() {
     if (player && typeof player.stopVideo === "function") {
       player.stopVideo();
     }
-  }
-
-  // 広告時間を除いたクライアント計測タイムを返す（ミリ秒）
-  function getClientElapsedMs() {
-    if (!state.clientStartMs) return 1;
-    const ongoingAdMs = state.adPauseStart ? (Date.now() - state.adPauseStart) : 0;
-    return Math.max(1, Date.now() - state.clientStartMs - state.adPausedMs - ongoingAdMs);
   }
 
   async function cleanupTimeout() {
@@ -554,8 +509,7 @@
 
   async function handleTimeout() {
     if (!state.playing) return;
-    ui.timer.textContent = formatTime(10000, 10000);
-    stopPlay(); // FIX #6: 共通関数を使用
+    stopPlay();
     setStatus("status_timeout");
     updateNowPlaying(true);
     await cleanupTimeout();
@@ -592,9 +546,7 @@
 
   function beginPlay(startSec) {
     state.playing = true;
-    state.clientStartMs = Date.now();
-    state.adPausedMs = 0;
-    state.adPauseStart = null;
+    state.startSec = startSec || 0;
     state.selectedSong = null;
     ui.videoWrapper.classList.add("is-obscured");
     setStatus("status_playing");
@@ -609,12 +561,7 @@
       player.playVideo();
     }
 
-    ui.timer.textContent = "0.000";
-    startTimer();
-
-    // タイムアウトは startTimer 内の RAF ループで管理するため setTimeout は不要
-    clearTimeout(state.timeoutId);
-    state.timeoutId = null;
+    startTimeoutWatch();
   }
 
   async function startSingle() {
@@ -781,7 +728,7 @@
   }
 
   async function finishSingle(normalized) {
-    const clientTimeMs = getClientElapsedMs();
+    const clientTimeMs = getElapsedMs();
     const { data, error } = await supabaseClient.rpc("finish_attempt", {
       p_attempt_id: state.attemptId,
       p_answer_norm: normalized,
@@ -814,7 +761,7 @@
   }
 
   async function finishMarathon(normalized) {
-    const clientTimeMs = getClientElapsedMs();
+    const clientTimeMs = getElapsedMs();
     const { data, error } = await supabaseClient.rpc("finish_attempt", {
       p_attempt_id: state.attemptId,
       p_answer_norm: normalized,
@@ -843,11 +790,6 @@
       stopPlay();
       updateNowPlaying(true);
 
-      const timeMs = result.song_time_ms || clientTimeMs;
-      ui.timer.textContent = formatTime(timeMs);
-      ui.timer.classList.remove("flash");
-      void ui.timer.offsetWidth;
-      ui.timer.classList.add("flash");
       setStatus("status_next");
 
       state.runPosition = result.next_song_pos;
