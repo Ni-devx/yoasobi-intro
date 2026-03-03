@@ -18,7 +18,7 @@
   --border:       #6d6d6d;
   --border-soft:  #ede9e5;
   --danger:       #c0392b;
-  --font-display: "DM Serif Display", serif;
+  --font-body: "DM Serif Display", serif;
   --font-body:    "Noto Sans JP", sans-serif;
   --font-mono:    "DM Mono", monospace;
   --radius:       14px;
@@ -42,7 +42,7 @@ body {
   display: flex;
   flex-direction: column;
   background-image:
-    linear-gradient(rgba(247,245,242,0.88), rgba(247,245,242,0.88)),
+    linear-gradient(rgba(247,245,242,0.9), rgba(247,245,242,0.9)),
     url('bg.webp');
   background-size: cover;
   background-position: center top;
@@ -82,7 +82,7 @@ body.not-home .home-only { display: none !important; }
 }
 
 .site-header h1 {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: clamp(44px, 7vw, 80px);
   font-weight: 400;
   line-height: 1.05;
@@ -150,7 +150,7 @@ main {
 }
 
 .page-nav__title {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: clamp(20px, 3vw, 28px);
   font-weight: 400;
   flex: 1;
@@ -636,7 +636,7 @@ button.ghost--sm {
 }
 
 .popup__title {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 22px;
   font-weight: 400;
   margin-bottom: 20px;
