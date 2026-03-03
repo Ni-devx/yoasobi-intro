@@ -5,7 +5,7 @@
   const i18n = {
     ja: {
       tagline: "非公式ファンプロジェクト",
-      subtitle: "音声で当てるイントロRTA。公式YouTube MVのみ使用。",
+      subtitle: "全てのMVから出題。(2026/03/03時点)",
       home_title: "イントロRTA",
       home_desc: "開始位置と対象を選んで挑戦。ランキングはサーバー計測です。",
       home_start: "開始",
@@ -57,7 +57,7 @@
     },
     en: {
       tagline: "Unofficial Fan Project",
-      subtitle: "Guess by audio. Official YouTube MV only.",
+      subtitle: "All songs with MVs are included. (As of 2026/03/03)",
       home_title: "Intro RTA",
       home_desc: "Choose start position and scope. Rankings are server-timed.",
       home_start: "Start",
@@ -244,6 +244,9 @@
       ui.views[key].classList.toggle("active", key === name);
     });
     state.view = name || "play";
+
+    // home以外ではbodyにnot-homeクラスを付与してheader/footerを非表示にする
+    document.body.classList.toggle("not-home", name !== "home");
 
     // setup / home / ranking ではプレイヤーパネルを非表示にする
     const hidePlayer = name === "home" || name === "ranking" || name === "setup";
@@ -1159,6 +1162,17 @@
       applyTranslations();
       loadSetupLeaderboard();
       loadRankingLeaderboard();
+    });
+
+    // サブ画面の言語トグルボタン（同じ処理）
+    document.querySelectorAll(".lang-btn").forEach((btn) => {
+      if (btn === ui.langToggle) return; // 重複バインド防止
+      btn.addEventListener("click", () => {
+        state.language = state.language === "ja" ? "en" : "ja";
+        applyTranslations();
+        loadSetupLeaderboard();
+        loadRankingLeaderboard();
+      });
     });
   }
 
