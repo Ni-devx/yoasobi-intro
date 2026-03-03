@@ -51,6 +51,7 @@
       status_config: "Supabase設定を入力してください",
       status_saved: "記録を保存しました",
       status_not_qualified: "Top30外でした",
+      next_song: "次の曲へ →",
       hidden: "非表示"
     },
     en: {
@@ -101,6 +102,7 @@
       status_config: "Add Supabase settings",
       status_saved: "Score saved",
       status_not_qualified: "Not in Top 30",
+      next_song: "Next Song →",
       hidden: "Hidden"
     }
   };
@@ -175,7 +177,9 @@
     progress: document.getElementById("progress"),
     overlay: document.getElementById("video-overlay"),
     videoWrapper: document.getElementById("video-wrapper"),
-    langToggle: document.getElementById("lang-toggle")
+    langToggle: document.getElementById("lang-toggle"),
+    nextArea: document.getElementById("quiz-next"),
+    nextBtn: document.getElementById("next-btn")
   };
 
   const supabaseClient = hasConfig && window.supabase
@@ -231,8 +235,8 @@
     });
     state.view = name || "play";
 
-    // #1: ホームとランキング画面ではプレイヤーパネルを非表示にする
-    const hidePlayer = name === "home" || name === "ranking";
+    // setup / home / ranking ではプレイヤーパネルを非表示にする
+    const hidePlayer = name === "home" || name === "ranking" || name === "setup";
     ui.playerPanel.classList.toggle("hidden", hidePlayer);
 
     if (name === "setup") {
@@ -341,9 +345,14 @@
 
   function setQuizActive(active) {
     ui.playerPanel.classList.toggle("play-active", active);
-    if (!active) {
+    if (active) {
+      // inline style をリセット（次の曲ボタン表示後に answer-area を戻す）
+      ui.quizAnswer.style.display = "";
+    } else {
       ui.answerSelect.innerHTML = "";
       ui.submitBtn.disabled = true;
+      ui.nextArea.classList.add("hidden");
+      ui.quizAnswer.style.display = "";
     }
   }
 
@@ -532,6 +541,8 @@
     updateNowPlaying(false);
     updateProgress();
 
+    // サムネが一瞬見えないようにcueVideo前からオーバーレイを表示
+    ui.videoWrapper.classList.add("is-obscured");
     await cueVideo(song.video_id);
 
     let maxStartSec = 0;
@@ -616,6 +627,11 @@
     updateNowPlaying(false);
     updateProgress();
 
+    // サムネが一瞬見えないようにcueVideo前からオーバーレイを表示
+    ui.videoWrapper.classList.add("is-obscured");
+    // next-area を隠して answer-area を再表示
+    ui.nextArea.classList.add("hidden");
+    setQuizActive(true);
     await cueVideo(song.video_id);
 
     let maxStartSec = 0;
@@ -730,9 +746,11 @@
       state.nextSongId = result.next_song_id;
       updateProgress();
 
-      setTimeout(() => {
-        startMarathonSong();
-      }, 500);
+      // 自動遷移をやめてNextボタンを表示
+      ui.answerSelect.innerHTML = "";
+      ui.submitBtn.disabled = true;
+      ui.quizAnswer.style.display = "none";
+      ui.nextArea.classList.remove("hidden");
       return;
     }
 
@@ -969,6 +987,11 @@
     ui.rankingSong.addEventListener("change", loadRankingLeaderboard);
 
     ui.saveScore.addEventListener("click", submitScore);
+
+    ui.nextBtn.addEventListener("click", () => {
+      ui.nextArea.classList.add("hidden");
+      startMarathonSong();
+    });
 
     ui.langToggle.addEventListener("click", () => {
       state.language = state.language === "ja" ? "en" : "ja";
