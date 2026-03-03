@@ -1,23 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
 
 /* ─────────────────────────────────────────
-   Design tokens
+   Design tokens — light theme
 ───────────────────────────────────────── */
 :root {
-  color-scheme: dark;
-  --bg:           #080c10;
-  --panel:        #0e1520;
-  --panel-soft:   #121c2a;
-  --panel-strong: #18253a;
-  --text:         #dde4ef;
-  --muted:        #6a7a94;
-  --muted-light:  #8a9ab4;
-  --accent:       #22d3ee;
-  --accent-dim:   rgba(34,211,238,0.12);
-  --accent-glow:  rgba(34,211,238,0.25);
-  --border:       #1e2d44;
-  --danger:       #f97316;
-  --font-display: "Noto Sans JP", serif;
+  color-scheme: light;
+  --bg:           #f7f5f2;
+  --panel:        #ffffff;
+  --panel-soft:   #fafaf8;
+  --panel-strong: #f2f0ed;
+  --text:         #1a1714;
+  --muted:        #7a7570;
+  --muted-light:  #9e9990;
+  --accent:       #d4523a;
+  --accent-dim:   rgba(212,82,58,0.08);
+  --accent-glow:  rgba(212,82,58,0.22);
+  --border:       #e2deda;
+  --border-soft:  #ede9e5;
+  --danger:       #c0392b;
+  --font-display: "DM Serif Display", serif;
   --font-body:    "Noto Sans JP", sans-serif;
   --font-mono:    "DM Mono", monospace;
   --radius:       14px;
@@ -40,15 +41,13 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  /* 大きめのグラデーション背景 */
   background-image:
-    radial-gradient(ellipse 120% 60% at 10% -10%, rgba(34,211,238,0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 80% 50% at 95% 5%, rgba(249,115,22,0.07) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 80% at 50% 100%, rgba(34,211,238,0.04) 0%, transparent 60%);
+    radial-gradient(ellipse 100% 50% at 0% 0%, rgba(212,82,58,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 40% at 100% 10%, rgba(180,140,100,0.05) 0%, transparent 50%);
 }
 
 /* ─────────────────────────────────────────
-   home-only: ホーム以外では非表示
+   home-only
 ───────────────────────────────────────── */
 .home-only { display: flex; }
 body.not-home .home-only { display: none !important; }
@@ -58,7 +57,7 @@ body.not-home .home-only { display: none !important; }
 ───────────────────────────────────────── */
 .site-header {
   flex-direction: column;
-  padding: 48px 8vw 0;
+  padding: 52px 8vw 0;
   gap: 0;
 }
 
@@ -72,11 +71,11 @@ body.not-home .home-only { display: none !important; }
 
 .eyebrow {
   font-size: 10px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: 14px;
-  opacity: 0.8;
+  margin-bottom: 16px;
+  opacity: 0.75;
 }
 
 .site-header h1 {
@@ -95,7 +94,7 @@ body.not-home .home-only { display: none !important; }
 
 .subhead {
   margin-top: 16px;
-  color: var(--muted-light);
+  color: var(--muted);
   font-size: 13px;
   letter-spacing: 0.02em;
 }
@@ -134,10 +133,11 @@ main {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 /* ─────────────────────────────────────────
-   Page nav（ホーム以外の画面上部ナビ）
+   Page nav
 ───────────────────────────────────────── */
 .page-nav {
   display: flex;
@@ -153,17 +153,18 @@ main {
   flex: 1;
   text-align: center;
   letter-spacing: 0.01em;
+  color: var(--text);
 }
 
 /* ─────────────────────────────────────────
    Panel
 ───────────────────────────────────────── */
 .panel {
-  background: linear-gradient(160deg, rgba(18,28,42,0.95), rgba(8,12,16,0.90));
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 24px;
-  box-shadow: 0 32px 64px rgba(0,0,0,0.4), 0 0 0 1px rgba(34,211,238,0.03);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
 }
 
 /* ─────────────────────────────────────────
@@ -179,7 +180,7 @@ button.primary {
   border-radius: var(--radius-sm);
   border: none;
   background: var(--accent);
-  color: #080c10;
+  color: #fff;
   font-weight: 700;
   font-size: 14px;
   letter-spacing: 0.04em;
@@ -198,7 +199,7 @@ button.primary--lg {
 button.primary:disabled { opacity: 0.35; cursor: not-allowed; }
 button.primary:not(:disabled):hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px var(--accent-glow);
+  box-shadow: 0 10px 24px var(--accent-glow);
 }
 
 button.ghost {
@@ -206,11 +207,15 @@ button.ghost {
   border-radius: 999px;
   border: 1px solid var(--border);
   background: transparent;
-  color: var(--muted-light);
+  color: var(--muted);
   font-size: 13px;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-button.ghost:hover { border-color: var(--accent); color: var(--accent); }
+button.ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
 
 button.ghost--sm {
   padding: 7px 13px;
@@ -246,7 +251,7 @@ button.ghost--sm {
 }
 
 .segmented button.active {
-  color: #080c10;
+  color: #fff;
   background: var(--accent);
   font-weight: 600;
 }
@@ -300,7 +305,6 @@ button.ghost--sm {
 .player-panel.play-active .timer-area { display: block; }
 .player-panel.play-active .answer-area { display: grid; }
 
-/* sub-nav（キャンセル＋now playing） */
 .sub-nav {
   display: flex;
   justify-content: space-between;
@@ -324,7 +328,7 @@ button.ghost--sm {
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--border);
-  background: #000;
+  background: #111;
 }
 
 .video-wrapper iframe {
@@ -338,7 +342,7 @@ button.ghost--sm {
   inset: 0;
   z-index: 10;
   pointer-events: none;
-  background: var(--panel);
+  background: #1a1714;
   opacity: 0;
   transition: opacity 0.25s ease;
   display: flex;
@@ -358,12 +362,11 @@ button.ghost--sm {
   content: "音声のみ / Audio only";
   font-size: 13px;
   letter-spacing: 0.08em;
-  color: var(--muted);
+  color: #9e9990;
 }
 
 .video-wrapper.is-obscured .overlay { opacity: 1; }
 
-/* video meta */
 .video-meta {
   display: flex;
   gap: 8px;
@@ -395,28 +398,12 @@ button.ghost--sm {
   line-height: 1;
 }
 
-.timer.flash { animation: flash 0.45s ease 2; }
-
-@keyframes flash {
-  0%   { color: var(--accent); transform: scale(1); }
-  50%  { color: #fff;          transform: scale(1.05); }
-  100% { color: var(--accent); transform: scale(1); }
-}
-
 .status {
   color: var(--muted);
   margin-top: 8px;
   font-size: 13px;
   letter-spacing: 0.04em;
 }
-
-/* Cancel btn */
-.cancel-btn {
-  font-size: 12px;
-  color: var(--muted);
-  border-color: transparent;
-}
-.cancel-btn:hover { color: var(--danger); border-color: var(--danger); }
 
 /* Answer area */
 .answer-area { margin-top: 18px; }
@@ -428,7 +415,7 @@ button.ghost--sm {
   padding: 14px 18px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: var(--panel-strong);
+  background: var(--panel);
   color: var(--text);
   font-family: inherit;
   font-size: 16px;
@@ -449,10 +436,10 @@ button.ghost--sm {
   z-index: 100;
   list-style: none;
   padding: 4px 0;
-  background: var(--panel-soft);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 20px 48px rgba(0,0,0,0.6);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.12);
   max-height: 260px;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -522,7 +509,8 @@ button.ghost--sm {
 
 .ranking-table td {
   padding: 10px;
-  border-bottom: 1px solid rgba(30,45,68,0.5);
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
 }
 
 .ranking-table tbody tr:hover { background: var(--accent-dim); }
@@ -540,8 +528,6 @@ button.ghost--sm {
   flex-direction: column;
   gap: 20px;
 }
-
-.result-body { }
 
 .result-time {
   font-family: var(--font-mono);
@@ -591,12 +577,170 @@ button.ghost--sm {
 ───────────────────────────────────────── */
 .site-footer {
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   padding: 28px 8vw 36px;
-  color: var(--muted);
+  color: var(--muted-light);
   font-size: 11px;
   letter-spacing: 0.04em;
   text-align: center;
+  border-top: 1px solid var(--border-soft);
+}
+
+.site-footer a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.site-footer a:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ─────────────────────────────────────────
+   How to play popup
+───────────────────────────────────────── */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(26,23,20,0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.popup-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.popup {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px 32px 28px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.14);
+  transform: translateY(8px);
+  transition: transform 0.2s ease;
+  position: relative;
+}
+
+.popup-overlay.is-open .popup {
+  transform: translateY(0);
+}
+
+.popup__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: border-color 0.15s, color 0.15s;
+  cursor: pointer;
+}
+
+.popup__close:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.popup__title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+.popup__section {
+  margin-bottom: 18px;
+}
+
+.popup__section h3 {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.popup__section p,
+.popup__section li {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.popup__section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.popup__section ul li::before {
+  content: "—  ";
+  color: var(--accent);
+  opacity: 0.6;
+}
+
+.popup__badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 2px 7px;
+  margin-right: 4px;
+}
+
+/* ─────────────────────────────────────────
+   全曲モード：曲ごとのタイム表示
+───────────────────────────────────────── */
+.song-time-display {
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  min-height: 1.8em;
+  text-align: center;
+}
+
+/* ─────────────────────────────────────────
+   広告再ロードエリア
+───────────────────────────────────────── */
+.ad-reload-area {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 0;
+}
+
+.ad-reload-area .ghost--sm {
+  font-size: 0.75rem;
+  opacity: 0.45;
+  transition: opacity 0.2s;
+}
+
+.ad-reload-area .ghost--sm:hover {
+  opacity: 1;
 }
 
 /* ─────────────────────────────────────────
@@ -626,30 +770,6 @@ button.ghost--sm {
   .save-block { grid-template-columns: 1fr; }
 
   .search-list { max-height: 200px; }
-}
-/* 全曲モード：曲ごとのタイム表示 */
-.song-time-display {
-  font-family: var(--font-mono);
-  font-size: 1.4rem;
-  color: var(--accent);
-  letter-spacing: 0.04em;
-  min-height: 1.8em;
-  text-align: center;
-}
 
-/* 広告再ロードエリア */
-.ad-reload-area {
-  display: flex;
-  justify-content: center;
-  padding: 4px 0 0;
-}
-
-.ad-reload-area .ghost--sm {
-  font-size: 0.75rem;
-  opacity: 0.55;
-  transition: opacity 0.2s;
-}
-
-.ad-reload-area .ghost--sm:hover {
-  opacity: 1;
+  .popup { padding: 28px 20px 24px; }
 }

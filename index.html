@@ -62,7 +62,7 @@
       </div>
 
       <div class="ad-reload-area">
-        <button id="reload-video-btn" class="ghost ghost--sm" data-i18n="reload_video">↺ 動画を再ロード（広告中） [R]</button>
+        <button id="reload-video-btn" class="ghost ghost--sm" data-i18n="reload_video">↺ 動画を再ロード（広告が流れている場合）</button>
       </div>
 
       <div class="answer-area" id="quiz-answer">
@@ -93,6 +93,7 @@
         <div class="home-panel__actions">
           <button id="go-setup" class="primary primary--lg" data-i18n="home_start">Start</button>
           <button id="go-ranking" class="ghost" data-i18n="home_ranking">Rankings</button>
+          <button id="how-to-play-btn" class="ghost" data-i18n="how_to_play">遊び方</button>
         </div>
       </div>
     </section>
@@ -208,11 +209,50 @@
 
   </main>
 
+  <!-- 遊び方ポップアップ -->
+  <div class="popup-overlay" id="how-to-play-overlay">
+    <div class="popup" role="dialog" aria-modal="true" aria-labelledby="popup-title">
+      <button class="popup__close" id="how-to-play-close" aria-label="Close">✕</button>
+      <h2 class="popup__title" id="popup-title" data-i18n="popup_title">遊び方</h2>
+
+      <div class="popup__section">
+        <h3 data-i18n="popup_about_title">About</h3>
+        <p data-i18n="popup_about_desc">YOASOBI の全 MV から出題されるイントロクイズです。音声だけを頼りに、できるだけ早く曲名を答えてください。</p>
+      </div>
+
+      <div class="popup__section">
+        <h3 data-i18n="popup_modes_title">モード</h3>
+        <ul>
+          <li data-i18n="popup_mode_intro"><span class="popup__badge">Intro</span>冒頭から再生。0秒スタートで計測。</li>
+          <li data-i18n="popup_mode_random"><span class="popup__badge">Random</span>ランダムな再生位置からスタート。</li>
+        </ul>
+      </div>
+
+      <div class="popup__section">
+        <h3 data-i18n="popup_scope_title">スコープ</h3>
+        <ul>
+          <li data-i18n="popup_scope_single"><span class="popup__badge">Single</span>1曲勝負。タイムをランキングに登録できます。</li>
+          <li data-i18n="popup_scope_marathon"><span class="popup__badge">Marathon</span>全曲連続。合計タイムでランキングに挑戦。</li>
+        </ul>
+      </div>
+
+      <div class="popup__section">
+        <h3 data-i18n="popup_tips_title">ヒント</h3>
+        <ul>
+          <li data-i18n="popup_tip_1">曲名を入力して候補から選択。</li>
+          <li data-i18n="popup_tip_2">広告が流れている場合は <span class="popup__badge">R</span> キーで再ロード。</li>
+          <li data-i18n="popup_tip_3">10秒以内に答えないと失敗になります。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <!-- ホーム画面のみ表示されるフッター -->
   <footer class="site-footer home-only">
     <p>Unofficial Fan Project</p>
     <p>Videos are streamed via official YouTube embed player</p>
     <p>All rights belong to their respective copyright holders</p>
+    <p><a href="https://github.com/Ni-devx/yoasobi-intro" target="_blank" rel="noopener" data-i18n="footer_repo">View source on GitHub</a></p>
   </footer>
 
   <script src="config.js"></script>

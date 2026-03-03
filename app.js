@@ -54,6 +54,21 @@
       next_song: "次の曲へ →",
       cancel_game: "キャンセル",
       reload_video: "↺ 動画を再ロード（広告中） [R]",
+      how_to_play: "遊び方",
+      popup_title: "遊び方",
+      popup_about_title: "About",
+      popup_about_desc: "YOASOBI の全 MV から出題されるイントロクイズです。音声だけを頼りに、できるだけ早く曲名を答えてください。",
+      popup_modes_title: "モード",
+      popup_mode_intro: "冒頭から再生。0秒スタートで計測。",
+      popup_mode_random: "ランダムな再生位置からスタート。",
+      popup_scope_title: "スコープ",
+      popup_scope_single: "1曲勝負。タイムをランキングに登録できます。",
+      popup_scope_marathon: "全曲連続。合計タイムでランキングに挑戦。",
+      popup_tips_title: "ヒント",
+      popup_tip_1: "曲名を入力して候補から選択。",
+      popup_tip_2: "広告が流れている場合は [R] キーで再ロード。",
+      popup_tip_3: "10秒以内に答えないと失敗になります。",
+      footer_repo: "View source on GitHub",
       hidden: "非表示"
     },
     en: {
@@ -107,6 +122,21 @@
       next_song: "Next Song →",
       cancel_game: "Cancel",
       reload_video: "↺ Reload video (if an ad is playing) [R]",
+      how_to_play: "How to Play",
+      popup_title: "How to Play",
+      popup_about_title: "About",
+      popup_about_desc: "An intro quiz featuring every YOASOBI MV. Listen to the audio and guess the song title as fast as you can.",
+      popup_modes_title: "Modes",
+      popup_mode_intro: "Play from the intro. Timer starts at 0.",
+      popup_mode_random: "Play from a random position.",
+      popup_scope_title: "Scope",
+      popup_scope_single: "One song per round. Submit your time to the rankings.",
+      popup_scope_marathon: "All songs in a row. Compete with total time.",
+      popup_tips_title: "Tips",
+      popup_tip_1: "Type a song name and select from the suggestions.",
+      popup_tip_2: "If an ad is playing, press [R] to reload the video.",
+      popup_tip_3: "You have 10 seconds to answer or it counts as a miss.",
+      footer_repo: "View source on GitHub",
       hidden: "Hidden"
     }
   };
@@ -187,7 +217,10 @@
     nextBtn: document.getElementById("next-btn"),
     cancelBtn: document.getElementById("cancel-btn"),
     songTimeDisplay: document.getElementById("song-time-display"),
-    reloadVideoBtn: document.getElementById("reload-video-btn")
+    reloadVideoBtn: document.getElementById("reload-video-btn"),
+    howToPlayBtn: document.getElementById("how-to-play-btn"),
+    howToPlayOverlay: document.getElementById("how-to-play-overlay"),
+    howToPlayClose: document.getElementById("how-to-play-close")
   };
 
   const supabaseClient = hasConfig && window.supabase
@@ -1117,26 +1150,14 @@
       showView("home");
     });
 
-    // 広告が流れているときに動画を再ロードする処理
+    // 広告が流れているときに動画を再ロードするボタン
     // IFrame API には広告スキップメソッドがないため、動画を再キューして再試行する
-    const reloadVideo = async () => {
+    ui.reloadVideoBtn.addEventListener("click", async () => {
       if (!state.currentSong || !player) return;
       stopPlay();
       ui.videoWrapper.classList.add("is-obscured");
       await cueVideo(state.currentSong.video_id);
       beginPlay(state.startSec);
-    };
-    ui.reloadVideoBtn.addEventListener("click", reloadVideo);
-
-    // R キーで動画再ロード（広告スキップ用）
-    // 答え入力欄にフォーカス中は誤発火しないようスキップ
-    document.addEventListener("keydown", (e) => {
-      if (!state.playing) return;
-      if (document.activeElement === ui.answerInput) return;
-      if (e.key === "r" || e.key === "R") {
-        e.preventDefault();
-        reloadVideo();
-      }
     });
 
     ui.langToggle.addEventListener("click", () => {
@@ -1144,6 +1165,24 @@
       applyTranslations();
       loadSetupLeaderboard();
       loadRankingLeaderboard();
+    });
+
+    // 遊び方ポップアップ
+    ui.howToPlayBtn.addEventListener("click", () => {
+      ui.howToPlayOverlay.classList.add("is-open");
+    });
+    ui.howToPlayClose.addEventListener("click", () => {
+      ui.howToPlayOverlay.classList.remove("is-open");
+    });
+    ui.howToPlayOverlay.addEventListener("click", (e) => {
+      if (e.target === ui.howToPlayOverlay) {
+        ui.howToPlayOverlay.classList.remove("is-open");
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        ui.howToPlayOverlay.classList.remove("is-open");
+      }
     });
 
     // サブ画面の言語トグルボタン（同じ処理）
