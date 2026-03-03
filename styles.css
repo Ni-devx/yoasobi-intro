@@ -42,9 +42,11 @@ body {
   display: flex;
   flex-direction: column;
   background-image:
-    radial-gradient(ellipse 100% 50% at 0% 0%, rgba(212,82,58,0.06) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 40% at 100% 10%, rgba(180,140,100,0.05) 0%, transparent 50%);
-}
+    linear-gradient(rgba(247,245,242,0.82), rgba(247,245,242,0.82)),
+    url('bg.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;}
 
 /* ─────────────────────────────────────────
    home-only
