@@ -131,6 +131,8 @@
     },
     rafId: null,
     timeoutId: null,
+    selectedSong: null,   // インクリメンタルサーチで選択中の曲
+    searchActiveIndex: -1, // キーボードで選択中のリスト位置
     playing: false,
     playerReady: false,
     statusKey: hasConfig ? "status_ready" : "status_config",
@@ -157,8 +159,9 @@
     playAgain: document.getElementById("play-again"),
     goRankingFromResult: document.getElementById("go-ranking-from-result"),
     startBtn: document.getElementById("start-btn"),
-    submitBtn: document.getElementById("submit-btn"),
-    answerSelect: document.getElementById("answer-select"),
+    answerInput: document.getElementById("answer-input"),
+    searchList: document.getElementById("search-list"),
+    searchWrap: document.getElementById("search-wrap"),
     resultTime: document.getElementById("result-time"),
     resultMessage: document.getElementById("result-message"),
     saveBlock: document.getElementById("save-block"),
@@ -224,7 +227,8 @@
     updateNowPlaying(false);
     updateProgress();
     if (state.playing) {
-      populateAnswerSelect();
+      // 言語切り替え時にサーチリストを再描画
+      openSearch();
     }
     setStatus(state.statusKey || (hasConfig ? "status_ready" : "status_config"));
   }
@@ -315,7 +319,6 @@
     clearTimeout(state.timeoutId);
     state.timeoutId = null;
     ui.videoWrapper.classList.remove("is-obscured");
-    ui.submitBtn.disabled = true;
   }
 
   function resetAttempt() {
@@ -346,13 +349,14 @@
   function setQuizActive(active) {
     ui.playerPanel.classList.toggle("play-active", active);
     if (active) {
-      // inline style をリセット（次の曲ボタン表示後に answer-area を戻す）
       ui.quizAnswer.style.display = "";
     } else {
-      ui.answerSelect.innerHTML = "";
-      ui.submitBtn.disabled = true;
+      closeSearch();
+      ui.answerInput.value = "";
       ui.nextArea.classList.add("hidden");
       ui.quizAnswer.style.display = "";
+      state.selectedSong = null;
+      state.searchActiveIndex = -1;
     }
   }
 
@@ -374,42 +378,88 @@
     return normalizeAnswer(state.language === "ja" ? song?.title_ja : song?.title_en);
   }
 
-  function populateAnswerSelect() {
-    if (!ui.answerSelect) return;
-    const currentSelection = ui.answerSelect.value;
-    const options = state.songs.map((song) => ({
-      id: song.id,
-      label: state.language === "ja" ? song.title_ja : song.title_en,
-      answer: getAnswerNormForSong(song)
-    }));
-
-    for (let i = options.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [options[i], options[j]] = [options[j], options[i]];
-    }
-
-    ui.answerSelect.innerHTML = "";
-
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.disabled = true;
-    placeholder.selected = true;
-    placeholder.textContent = i18n[state.language].answer_select_placeholder;
-    ui.answerSelect.appendChild(placeholder);
-
-    options.forEach((opt) => {
-      const option = document.createElement("option");
-      option.value = opt.id;
-      option.textContent = opt.label;
-      option.dataset.answer = opt.answer;
-      ui.answerSelect.appendChild(option);
-    });
-
-    if (currentSelection) {
-      ui.answerSelect.value = currentSelection;
-    }
-    ui.submitBtn.disabled = true;
+  // ── インクリメンタルサーチ ──────────────────────────────────
+  function escapeHtml(str) {
+    return str.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   }
+
+  function highlightMatch(text, query) {
+    if (!query) return escapeHtml(text);
+    const idx = text.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return escapeHtml(text);
+    return (
+      escapeHtml(text.slice(0, idx)) +
+      "<mark>" + escapeHtml(text.slice(idx, idx + query.length)) + "</mark>" +
+      escapeHtml(text.slice(idx + query.length))
+    );
+  }
+
+  function getFilteredSongs(query) {
+    const q = (query || "").trim().toLowerCase();
+    if (!q) return state.songs;
+    return state.songs.filter((song) => {
+      return (
+        song.title_ja.toLowerCase().includes(q) ||
+        song.title_en.toLowerCase().includes(q) ||
+        song.id.toLowerCase().includes(q)
+      );
+    });
+  }
+
+  function renderSearchList(songs, query) {
+    ui.searchList.innerHTML = "";
+    state.searchActiveIndex = -1;
+    if (!songs.length) {
+      ui.searchList.classList.add("hidden");
+      return;
+    }
+    songs.forEach((song, i) => {
+      const li = document.createElement("li");
+      const ja = highlightMatch(song.title_ja, query);
+      const en = highlightMatch(song.title_en, query);
+      li.innerHTML = `<span class="song-ja">${ja}</span><span class="song-en">${en}</span>`;
+      li.dataset.songId = song.id;
+      li.addEventListener("mousedown", (e) => {
+        // mousedown で選択 (blur より先に発火させる)
+        e.preventDefault();
+        selectAndSubmit(song);
+      });
+      ui.searchList.appendChild(li);
+    });
+    ui.searchList.classList.remove("hidden");
+  }
+
+  function openSearch() {
+    const q = ui.answerInput.value;
+    const songs = getFilteredSongs(q);
+    renderSearchList(songs, q);
+  }
+
+  function closeSearch() {
+    ui.searchList.classList.add("hidden");
+    state.searchActiveIndex = -1;
+  }
+
+  function moveSearchActive(dir) {
+    const items = ui.searchList.querySelectorAll("li");
+    if (!items.length) return;
+    items[state.searchActiveIndex]?.classList.remove("active");
+    state.searchActiveIndex = Math.max(0,
+      Math.min(items.length - 1, state.searchActiveIndex + dir));
+    const active = items[state.searchActiveIndex];
+    active.classList.add("active");
+    active.scrollIntoView({ block: "nearest" });
+  }
+
+  function selectAndSubmit(song) {
+    if (!state.playing) return;
+    state.selectedSong = song;
+    ui.answerInput.value = state.language === "ja" ? song.title_ja : song.title_en;
+    closeSearch();
+    // 即座に回答送信
+    submitAnswer();
+  }
+  // ────────────────────────────────────────────────────────────
 
   function startTimer() {
     const tick = () => {
@@ -488,12 +538,15 @@
 
   function beginPlay(startSec) {
     state.playing = true;
-    // FIX #2: サーバー時刻との比較をやめ、ここでクライアント時刻を記録してタイマー基準とする
     state.clientStartMs = Date.now();
+    state.selectedSong = null;
     ui.videoWrapper.classList.add("is-obscured");
-    ui.submitBtn.disabled = false;
-    populateAnswerSelect();
     setStatus("status_playing");
+    // クイズ開始時に入力欄をクリアしてフォーカス
+    ui.answerInput.value = "";
+    closeSearch();
+    // 少し遅延させて確実にフォーカスが当たるようにする
+    setTimeout(() => ui.answerInput.focus(), 100);
 
     if (player && state.currentSong?.video_id) {
       player.seekTo(startSec || 0, true);
@@ -747,8 +800,8 @@
       updateProgress();
 
       // 自動遷移をやめてNextボタンを表示
-      ui.answerSelect.innerHTML = "";
-      ui.submitBtn.disabled = true;
+      closeSearch();
+      ui.answerInput.value = "";
       ui.quizAnswer.style.display = "none";
       ui.nextArea.classList.remove("hidden");
       return;
@@ -773,20 +826,15 @@
 
   async function submitAnswer() {
     if (!state.playing) return;
-    const selectedId = ui.answerSelect.value;
-    if (!selectedId) return;
+    const song = state.selectedSong;
+    if (!song) return;
 
     if (!supabaseClient) {
       setStatus("status_config");
       return;
     }
 
-    // FIX #1: クライアント側での答え合わせを廃止。
-    // サーバー（finish_single / finish_marathon_song）が answers_normalized で正誤を判定するので
-    // ここでは選択された曲の正規化済み答えをそのまま送るだけでよい。
-    const selectedOption = ui.answerSelect.selectedOptions[0];
-    const selectedSong = state.songs.find((song) => song.id === selectedId);
-    const normalized = selectedOption?.dataset?.answer || getAnswerNormForSong(selectedSong);
+    const normalized = getAnswerNormForSong(song);
 
     if (state.scope === "marathon") {
       await finishMarathon(normalized);
@@ -966,9 +1014,49 @@
     });
 
     ui.startBtn.addEventListener("click", startAttempt);
-    ui.submitBtn.addEventListener("click", submitAnswer);
-    ui.answerSelect.addEventListener("change", () => {
-      ui.submitBtn.disabled = !ui.answerSelect.value;
+
+    // インクリメンタルサーチのイベント
+    let isComposing = false;  // IME変換中フラグ
+
+    ui.answerInput.addEventListener("compositionstart", () => {
+      isComposing = true;
+    });
+    ui.answerInput.addEventListener("compositionend", () => {
+      isComposing = false;
+      openSearch();
+    });
+    ui.answerInput.addEventListener("input", () => {
+      if (isComposing) return;
+      state.selectedSong = null;
+      openSearch();
+    });
+    ui.answerInput.addEventListener("focus", () => {
+      openSearch();
+    });
+    ui.answerInput.addEventListener("blur", () => {
+      // mousedown で選択した場合は blur より先に処理されるので 150ms 遅延
+      setTimeout(() => closeSearch(), 150);
+    });
+    ui.answerInput.addEventListener("keydown", (e) => {
+      const listVisible = !ui.searchList.classList.contains("hidden");
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (!listVisible) openSearch();
+        moveSearchActive(1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        moveSearchActive(-1);
+      } else if (e.key === "Enter") {
+        if (isComposing) return;
+        e.preventDefault();
+        const active = ui.searchList.querySelector("li.active");
+        if (active) {
+          const song = state.songs.find((s) => s.id === active.dataset.songId);
+          if (song) selectAndSubmit(song);
+        }
+      } else if (e.key === "Escape") {
+        closeSearch();
+      }
     });
 
     ui.modeToggle.addEventListener("click", (event) => {
@@ -1044,7 +1132,6 @@
         onReady: () => {
           state.playerReady = true;
           updateStartButton();
-          ui.submitBtn.disabled = true;
           setStatus(hasConfig ? "status_ready" : "status_config");
         },
         onStateChange: (event) => {

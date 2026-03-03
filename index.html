@@ -52,8 +52,19 @@
       </div>
 
       <div class="answer-area" id="quiz-answer">
-        <select id="answer-select"></select>
-        <button id="submit-btn" class="primary" disabled data-i18n="submit">Submit</button>
+        <div class="search-wrap" id="search-wrap">
+          <input
+            id="answer-input"
+            type="text"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            data-i18n-placeholder="answer_placeholder"
+            placeholder="曲名を入力 / Type song title"
+          >
+          <ul class="search-list hidden" id="search-list"></ul>
+        </div>
       </div>
 
       <div class="next-area hidden" id="quiz-next">
