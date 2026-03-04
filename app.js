@@ -1218,25 +1218,41 @@
     ctx.fillText("YOASOBI Intro Quiz  —  ni-devx.github.io/yoasobi-intro", W / 2, 284);
   }
 
-  function shareOnX() {
+  async function shareOrDownloadBadge() {
+    const canvas = ui.badgeCanvas;
     const songTitle = state.result.songId
       ? (state.language === "ja"
           ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
           : state.songs.find((s) => s.id === state.result.songId)?.title_en)
       : null;
-    const rank = state.result.rank;
-    const rankPart = rank === 1 ? "🥇 1st place" : (rank ? "#" + rank : "");
     const tweetText = state.language === "ja"
-      ? rankPart + " YOASOBI Intro Quiz
-" + "タイム: " + formatTime(state.result.timeMs) + "s" + (songTitle ? "
-🎵 " + songTitle : "") + "
-https://ni-devx.github.io/yoasobi-intro"
-      : rankPart + " YOASOBI Intro Quiz
-" + "Time: " + formatTime(state.result.timeMs) + "s" + (songTitle ? "
-🎵 " + songTitle : "") + "
-https://ni-devx.github.io/yoasobi-intro";
-    const xUrl = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(tweetText);
-    window.open(xUrl, "_blank", "noopener");
+      ? `🥇 YOASOBI Intro Quiz で1位を獲得しました！\nタイム: ${formatTime(state.result.timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro`
+      : `🥇 I got 1st place on YOASOBI Intro Quiz!\nTime: ${formatTime(state.result.timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro`;
+
+    // Web Share API（モバイル等）が使える場合はそちらを優先
+    if (navigator.canShare) {
+      try {
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+        const file = new File([blob], "yoasobi-quiz-1st.png", { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], text: tweetText });
+          return;
+        }
+      } catch (err) {
+        // フォールバックへ
+      }
+    }
+
+    // フォールバック: 画像をダウンロード → X を開く
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = "yoasobi-quiz-1st.png";
+    a.click();
+
+    setTimeout(() => {
+      const xUrl = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(tweetText);
+      window.open(xUrl, "_blank", "noopener");
+    }, 500);
   }
 
   async function submitScore() {
@@ -1346,7 +1362,7 @@ https://ni-devx.github.io/yoasobi-intro";
       loadRankingLeaderboard();
     });
 
-    ui.shareXBtn.addEventListener("click", shareOnX);
+    ui.shareXBtn.addEventListener("click", shareOrDownloadBadge);
     ui.downloadBadgeBtn.addEventListener("click", () => {
       const a = document.createElement("a");
       a.href = ui.badgeCanvas.toDataURL("image/png");
