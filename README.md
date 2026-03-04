@@ -1,11 +1,16 @@
 # YOASOBI Intro RTA (GitHub Pages)
 
-Unofficial fan project. This site uses the official YouTube IFrame Player API and a Supabase backend for server-timed runs and leaderboards.
+このREAME.mdでは、YOASOBI Intro Quiz（本サイト）の技術的な内容をまとめています。また、本サイトに用いられているソースコードは`Main Branch`から確認できます。
 
-## Site Introduction
+## Technical Things
 
-All MV uploaded on YouTube is covered.
+### 利用した外部リソース
 
-In Intro mode, MV will start at the beginning. In random mode, start at a random point. You submit your answer when you realize what the song is by selecting option.
+- GitHub Pages
+    - ホスティング
 
-In one song mode, you will hear just one MV. In marathon mode, all MV will be streamed in random order. When you make a mistake challenge will end.
+- Supabase
+    - 回答時間の集計関数、ランキングの保存
+
+- Youtube iframe API
+    - MVの取得
