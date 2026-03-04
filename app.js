@@ -577,7 +577,8 @@
   function beginPlay(startSec) {
     state.playing = true;
     state.startSec = startSec || 0;
-    state.accumulatedMs = 0;
+    // accumulatedMs はここでリセットしない（Reload時に累積を引き継ぐため）
+    // リセットは新ゲーム開始時の resetAttempt() で行う
     state.lastPlayStart = null;
     state.selectedSong = null;
     ui.videoWrapper.classList.add("is-obscured");
@@ -705,6 +706,10 @@
   }
 
   async function startMarathonSong() {
+    // 曲ごとにリセット（Reload時は beginPlay() がリセットしないので曲内累積は維持される）
+    state.accumulatedMs = 0;
+    state.lastPlayStart = null;
+
     if (!state.runId || !state.nextSongId) {
       setStatus("status_error");
       resetRun();
