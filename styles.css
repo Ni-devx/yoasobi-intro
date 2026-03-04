@@ -1,3 +1,4 @@
+/* styles.css — 768px レスポンシブ対応版 */
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
 
 /* ─────────────────────────────────────────
@@ -18,11 +19,13 @@
   --border:       #6d6d6d;
   --border-soft:  #ede9e5;
   --danger:       #c0392b;
-  --font-body: "DM Serif Display", serif;
+  --font-serif:   "DM Serif Display", serif;
   --font-body:    "Noto Sans JP", sans-serif;
   --font-mono:    "DM Mono", monospace;
   --radius:       14px;
   --radius-sm:    8px;
+  --space-page-x: 8vw;
+  --space-page-x-sm: 5vw;
 }
 
 /* ─────────────────────────────────────────
@@ -49,18 +52,15 @@ body {
   background-attachment: fixed;
 }
 
-/* ─────────────────────────────────────────
-   home-only
-───────────────────────────────────────── */
 .home-only { display: flex; }
 body.not-home .home-only { display: none !important; }
 
 /* ─────────────────────────────────────────
-   Site header（ホームのみ）
+   Site header
 ───────────────────────────────────────── */
 .site-header {
   flex-direction: column;
-  padding: 52px 8vw 0;
+  padding: 52px var(--space-page-x) 0;
   gap: 0;
 }
 
@@ -112,21 +112,18 @@ body.not-home .home-only { display: none !important; }
 ───────────────────────────────────────── */
 main {
   flex: 1;
-  padding: 0 8vw 40px;
+  padding: 0 var(--space-page-x) 40px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* ─────────────────────────────────────────
-   View toggle
-───────────────────────────────────────── */
 .view { display: none; }
 .view.active { display: block; }
 .hidden { display: none !important; }
 
 /* ─────────────────────────────────────────
-   ホームパネル
+   Home panel
 ───────────────────────────────────────── */
 .home-panel {
   padding: 48px 0 40px;
@@ -266,14 +263,10 @@ button.ghost--sm {
 /* ─────────────────────────────────────────
    Player panel
 ───────────────────────────────────────── */
-.player-panel {
-  margin-bottom: 8px;
-}
+.player-panel { margin-bottom: 8px; }
 
 .player-panel .timer-area,
-.player-panel .answer-area {
-  display: none;
-}
+.player-panel .answer-area { display: none; }
 
 .player-panel.play-active .timer-area { display: block; }
 .player-panel.play-active .answer-area { display: grid; }
@@ -284,6 +277,7 @@ button.ghost--sm {
   align-items: center;
   margin-bottom: 16px;
   min-height: 32px;
+  gap: 8px;
 }
 
 .video-area {
@@ -304,11 +298,7 @@ button.ghost--sm {
   background: #111;
 }
 
-.video-wrapper iframe {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
+.video-wrapper iframe { width: 100%; height: 100%; display: block; }
 
 .overlay {
   position: absolute;
@@ -325,12 +315,7 @@ button.ghost--sm {
   gap: 12px;
 }
 
-.overlay::before {
-  content: "🎵";
-  font-size: 48px;
-  line-height: 1;
-}
-
+.overlay::before { content: "🎵"; font-size: 48px; line-height: 1; }
 .overlay::after {
   content: "音声のみ / Audio only";
   font-size: 13px;
@@ -346,6 +331,7 @@ button.ghost--sm {
   align-items: center;
   color: var(--muted);
   font-size: 12px;
+  flex-wrap: wrap;
 }
 
 .video-meta .label {
@@ -356,11 +342,7 @@ button.ghost--sm {
 
 .video-meta .divider { color: var(--border); }
 
-/* Timer */
-.timer-area {
-  margin-top: 20px;
-  text-align: center;
-}
+.timer-area { margin-top: 20px; text-align: center; }
 
 .timer {
   font-family: var(--font-mono);
@@ -378,7 +360,6 @@ button.ghost--sm {
   letter-spacing: 0.04em;
 }
 
-/* Answer area */
 .answer-area { margin-top: 18px; }
 
 .search-wrap { position: relative; }
@@ -433,10 +414,7 @@ button.ghost--sm {
 }
 
 .search-list li:hover,
-.search-list li.active {
-  background: var(--accent-dim);
-  color: var(--accent);
-}
+.search-list li.active { background: var(--accent-dim); color: var(--accent); }
 
 .search-list li .song-ja { font-weight: 600; font-size: 14px; }
 .search-list li .song-en { font-size: 11px; color: var(--muted); }
@@ -447,12 +425,11 @@ button.ghost--sm {
   font-weight: 700;
 }
 
-/* Next area */
 .next-area { margin-top: 12px; }
 .next-area button { width: 100%; }
 
 /* ─────────────────────────────────────────
-   Ranking controls
+   Ranking
 ───────────────────────────────────────── */
 .ranking-controls {
   display: flex;
@@ -461,13 +438,16 @@ button.ghost--sm {
   margin-bottom: 16px;
 }
 
-/* ─────────────────────────────────────────
-   Ranking table
-───────────────────────────────────────── */
+.ranking-table {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .ranking-table table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  min-width: 320px;
 }
 
 .ranking-table th {
@@ -478,6 +458,7 @@ button.ghost--sm {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
+  white-space: nowrap;
 }
 
 .ranking-table td {
@@ -487,6 +468,7 @@ button.ghost--sm {
 }
 
 .ranking-table tbody tr:hover { background: var(--accent-dim); }
+
 .ranking-table .empty {
   text-align: center;
   color: var(--muted);
@@ -494,22 +476,10 @@ button.ghost--sm {
 }
 
 /* ─────────────────────────────────────────
-   Result panel
+   Result
 ───────────────────────────────────────── */
-.result-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
+.result-panel { display: flex; flex-direction: column; gap: 20px; }
 
-/* メインカード */
-.result-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* ランクバッジ（メダル絵文字 or #N） */
 .result-rank-badge {
   font-size: clamp(36px, 6vw, 56px);
   line-height: 1.1;
@@ -520,7 +490,6 @@ button.ghost--sm {
 .result-rank-badge.rank--silver { color: #8c9bab; }
 .result-rank-badge.rank--bronze { color: #a0522d; }
 
-/* タイム */
 .result-time {
   font-family: var(--font-mono);
   font-size: clamp(44px, 7vw, 72px);
@@ -530,7 +499,6 @@ button.ghost--sm {
   color: var(--accent);
 }
 
-/* ランクテキスト（"1位" / "#5" / "ランク外"） */
 .result-rank-text {
   font-family: var(--font-mono);
   font-size: 15px;
@@ -539,7 +507,6 @@ button.ghost--sm {
   min-height: 1.4em;
 }
 
-/* 曲名 */
 .result-song-label {
   font-size: 16px;
   font-weight: 600;
@@ -548,7 +515,6 @@ button.ghost--sm {
   min-height: 1.4em;
 }
 
-/* モード・スコープ */
 .result-mode-label {
   font-size: 11px;
   letter-spacing: 0.1em;
@@ -557,7 +523,6 @@ button.ghost--sm {
   min-height: 1.4em;
 }
 
-/* 保存ブロック */
 .save-block {
   display: grid;
   grid-template-columns: 1fr 140px;
@@ -586,13 +551,7 @@ button.ghost--sm {
   font-family: inherit;
 }
 
-/* シェアブロック */
-.share-block {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
+.share-block { display: flex; flex-direction: column; gap: 12px; }
 .share-block.hidden { display: none; }
 
 #share-canvas {
@@ -604,24 +563,11 @@ button.ghost--sm {
   display: block;
 }
 
-.share-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+.share-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-/* Xボタン：アクセントカラーで差別化 */
-#share-x {
-  border-color: var(--accent);
-  color: var(--accent);
-}
+#share-x { border-color: var(--accent); color: var(--accent); }
+#share-x:hover { background: var(--accent); color: #fff; }
 
-#share-x:hover {
-  background: var(--accent);
-  color: #fff;
-}
-
-/* ─── Result leaderboard ─── */
 .result-leaderboard {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -661,26 +607,21 @@ button.ghost--sm {
 
 .result-leaderboard tbody tr:last-child td { border-bottom: none; }
 
-/* プレイヤー自身の行をハイライト */
 .result-my-row td {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--accent);
   font-weight: 600;
 }
 
-.result-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+.result-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ─────────────────────────────────────────
-   Footer（ホームのみ）
+   Footer
 ───────────────────────────────────────── */
 .site-footer {
   flex-direction: column;
   gap: 6px;
-  padding: 28px 8vw 36px;
+  padding: 28px var(--space-page-x) 36px;
   color: var(--muted-light);
   font-size: 11px;
   letter-spacing: 0.04em;
@@ -695,13 +636,10 @@ button.ghost--sm {
   transition: color 0.15s, border-color 0.15s;
 }
 
-.site-footer a:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
+.site-footer a:hover { color: var(--accent); border-color: var(--accent); }
 
 /* ─────────────────────────────────────────
-   How to play popup
+   Popup
 ───────────────────────────────────────── */
 .popup-overlay {
   position: fixed;
@@ -716,12 +654,10 @@ button.ghost--sm {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
+  overflow-y: auto;
 }
 
-.popup-overlay.is-open {
-  opacity: 1;
-  pointer-events: auto;
-}
+.popup-overlay.is-open { opacity: 1; pointer-events: auto; }
 
 .popup {
   background: var(--panel);
@@ -736,9 +672,7 @@ button.ghost--sm {
   position: relative;
 }
 
-.popup-overlay.is-open .popup {
-  transform: translateY(0);
-}
+.popup-overlay.is-open .popup { transform: translateY(0); }
 
 .popup__close {
   position: absolute;
@@ -759,10 +693,7 @@ button.ghost--sm {
   cursor: pointer;
 }
 
-.popup__close:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
+.popup__close:hover { border-color: var(--accent); color: var(--accent); }
 
 .popup__title {
   font-family: var(--font-body);
@@ -772,9 +703,7 @@ button.ghost--sm {
   color: var(--text);
 }
 
-.popup__section {
-  margin-bottom: 18px;
-}
+.popup__section { margin-bottom: 18px; }
 
 .popup__section h3 {
   font-size: 10px;
@@ -791,10 +720,7 @@ button.ghost--sm {
   line-height: 1.7;
 }
 
-.popup__section ul {
-  list-style: none;
-  padding: 0;
-}
+.popup__section ul { list-style: none; padding: 0; }
 
 .popup__section ul li::before {
   content: "—  ";
@@ -814,7 +740,7 @@ button.ghost--sm {
 }
 
 /* ─────────────────────────────────────────
-   全曲モード：曲ごとのタイム表示
+   Misc
 ───────────────────────────────────────── */
 .song-time-display {
   font-family: var(--font-mono);
@@ -825,55 +751,236 @@ button.ghost--sm {
   text-align: center;
 }
 
-/* ─────────────────────────────────────────
-   広告再ロードエリア
-───────────────────────────────────────── */
 .ad-reload-area {
   display: flex;
   justify-content: center;
   padding: 8px 0 0;
 }
 
-.ad-reload-area .ghost--sm {
-  font-size: 0.75rem;
-  opacity: 0.45;
-  transition: opacity 0.2s;
-}
+.ad-reload-area .ghost--sm { font-size: 0.75rem; opacity: 0.45; transition: opacity 0.2s; }
+.ad-reload-area .ghost--sm:hover { opacity: 1; }
 
-.ad-reload-area .ghost--sm:hover {
-  opacity: 1;
-}
+/* ══════════════════════════════════════════
+   RESPONSIVE — 768px
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
 
-/* ─────────────────────────────────────────
-   Responsive
-───────────────────────────────────────── */
-@media (max-width: 700px) {
-  main { padding: 0 5vw 32px; }
+  /* ── ページ全体 ── */
+  main {
+    padding: 0 var(--space-page-x-sm) 32px;
+    gap: 16px;
+  }
 
-  .site-header { padding: 36px 5vw 0; }
-  .site-footer  { padding: 24px 5vw 32px; }
+  /* ── ヘッダー ── */
+  .site-header {
+    padding: 36px var(--space-page-x-sm) 0;
+  }
 
-  .home-panel { padding: 32px 0 28px; }
+  .site-header h1 {
+    font-size: clamp(36px, 10vw, 52px);
+  }
 
-  .page-nav { padding: 20px 0 16px; }
+  .subhead {
+    margin-top: 10px;
+    font-size: 12px;
+  }
 
+  /* ── フッター ── */
+  .site-footer {
+    padding: 24px var(--space-page-x-sm) 32px;
+    font-size: 10px;
+  }
+
+  /* ── ホームパネル ── */
+  .home-panel {
+    padding: 32px 0 28px;
+  }
+
+  .home-panel__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home-panel__actions .ghost {
+    text-align: center;
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+
+  /* ── ページナビ ── */
+  .page-nav {
+    padding: 20px 0 16px;
+    gap: 8px;
+  }
+
+  .page-nav__title {
+    font-size: 18px;
+  }
+
+  /* ── パネル共通 ── */
+  .panel {
+    padding: 18px 16px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ── セットアップ ── */
+  .controls {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  /* ── プレイヤーパネル：画面幅フル ── */
+  .player-panel {
+    margin-left: calc(-1 * var(--space-page-x-sm));
+    margin-right: calc(-1 * var(--space-page-x-sm));
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    padding: 16px var(--space-page-x-sm) 20px;
+  }
+
+  .sub-nav {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .video-meta { font-size: 11px; gap: 5px; }
+  .video-meta .divider { display: none; }
+
+  /* ── 動画：アスペクト比維持 ── */
   .video-wrapper {
     width: 100%;
     height: auto;
     aspect-ratio: 16 / 9;
+    border-radius: var(--radius-sm);
   }
 
-  .video-wrapper iframe {
-    width: 100%;
-    height: 100%;
+  /* ── タイマー ── */
+  .timer-area { margin-top: 14px; }
+
+  .timer {
+    font-size: clamp(40px, 14vw, 64px);
   }
 
-  .save-block { grid-template-columns: 1fr; }
+  .status { font-size: 12px; }
 
-  .share-actions { flex-direction: column; }
-  #share-canvas { max-width: 100%; }
+  /* ── 回答入力：iOS ズーム防止（font-size: 16px 以上） ── */
+  .answer-area { margin-top: 14px; }
 
-  .search-list { max-height: 200px; }
+  .search-wrap input {
+    padding: 13px 16px;
+    font-size: 16px;
+    border-radius: var(--radius-sm);
+  }
 
-  .popup { padding: 28px 20px 24px; }
+  .search-list {
+    max-height: 200px;
+    border-radius: var(--radius-sm);
+  }
+
+  .search-list li { padding: 11px 14px; }
+
+  .next-area { margin-top: 10px; }
+
+  .song-time-display { font-size: 1.2rem; }
+
+  /* ── ランキング ── */
+  .ranking-controls {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ranking-controls select { width: 100%; }
+
+  .ranking-table th,
+  .ranking-table td {
+    padding: 9px 8px;
+    font-size: 12px;
+  }
+
+  /* ── 結果 ── */
+  .result-time {
+    font-size: clamp(40px, 13vw, 60px);
+  }
+
+  .save-block {
+    grid-template-columns: 1fr;
+  }
+
+  .save-block button { width: 100%; }
+
+  .result-actions {
+    flex-direction: column;
+  }
+
+  .result-actions .ghost {
+    text-align: center;
+    padding: 13px 16px;
+  }
+
+  .result-leaderboard th,
+  .result-leaderboard td {
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+
+  /* ── バッジシェアボタン ── */
+  .badge-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .badge-actions .ghost { text-align: center; }
+
+  /* ── ポップアップ：ボトムシート風 ── */
+  .popup-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .popup {
+    padding: 28px 20px 36px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    max-width: 100%;
+    margin-top: auto;
+    transform: translateY(24px);
+  }
+
+  .popup-overlay.is-open .popup {
+    transform: translateY(0);
+  }
+
+  .popup__title {
+    font-size: 18px;
+    margin-bottom: 16px;
+    padding-right: 36px; /* ✕ ボタンと被らないよう */
+  }
+
+  .popup__section p,
+  .popup__section li {
+    font-size: 12px;
+    line-height: 1.75;
+  }
+}
+
+/* ─────────────────────────────────────────
+   超小画面補正（360px 以下）
+───────────────────────────────────────── */
+@media (max-width: 360px) {
+  :root {
+    --space-page-x-sm: 4vw;
+  }
+
+  .site-header h1 { font-size: 32px; }
+
+  .home-panel__actions .ghost {
+    font-size: 13px;
+    padding: 11px 14px;
+  }
+
+  .timer { font-size: 36px; }
+
+  .result-time { font-size: 36px; }
 }
