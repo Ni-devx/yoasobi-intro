@@ -746,6 +746,10 @@
   }
 
   async function startMarathonSong() {
+    // marathon は曲ごとにストップウォッチをリセット（各曲タイムの総和が最終スコア）
+    state.accumulatedMs = 0;
+    watchedMs = 0;
+
     if (!state.runId || !state.nextSongId) {
       setStatus("status_error");
       resetRun();
