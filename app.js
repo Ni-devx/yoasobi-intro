@@ -161,6 +161,7 @@
       songId: null
     },
     timeoutId: null,
+    accumulatedMs: 0,  // Reload前の経過時間の累積
     songTimes: [],     // marathon: 曲ごとのタイム(ms)を蓄積
     selectedSong: null,   // インクリメンタルサーチで選択中の曲
     searchActiveIndex: -1, // キーボードで選択中のリスト位置
@@ -231,6 +232,7 @@
   let youtubeReady = false;
   let songsLoaded = false;
   let cueResolver = null;
+  let mediaSessionInterval = null;
 
   function normalizeAnswer(text) {
     return (text || "")
@@ -361,12 +363,17 @@
       clearInterval(state.timeoutId);
       state.timeoutId = null;
     }
+    if (mediaSessionInterval) {
+      clearInterval(mediaSessionInterval);
+      mediaSessionInterval = null;
+    }
     ui.videoWrapper.classList.remove("is-obscured");
   }
 
   function resetAttempt() {
     state.attemptId = null;
     state.startSec = 0;
+    state.accumulatedMs = 0;
     stopPlay();
   }
 
@@ -511,8 +518,8 @@
   // 広告中・バッファリング中は本編の getCurrentTime() が進まないため自然に停止する
   function getElapsedMs() {
     if (!player) return 1;
-    const elapsed = (player.getCurrentTime() - state.startSec) * 1000;
-    return Math.max(1, Math.round(elapsed));
+    const current = (player.getCurrentTime() - state.startSec) * 1000;
+    return Math.max(1, Math.round(state.accumulatedMs + current));
   }
 
   // タイムアウト監視（setInterval で 100ms ごとにポーリング）
@@ -592,6 +599,18 @@
     state.selectedSong = null;
     ui.videoWrapper.classList.add("is-obscured");
     setStatus("status_playing");
+
+    // MediaSession のタイトル・サムネイルを常に非表示にする
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = null;
+      if (mediaSessionInterval) clearInterval(mediaSessionInterval);
+      mediaSessionInterval = setInterval(() => {
+        if (navigator.mediaSession.metadata !== null) {
+          navigator.mediaSession.metadata = null;
+        }
+      }, 500);
+    }
+
     // クイズ開始時に入力欄をクリアしてフォーカス
     ui.answerInput.value = "";
     closeSearch();
@@ -1154,6 +1173,11 @@
     // IFrame API には広告スキップメソッドがないため、動画を再キューして再試行する
     ui.reloadVideoBtn.addEventListener("click", async () => {
       if (!state.currentSong || !player) return;
+      // Reload前の経過時間を累積してチート防止
+      if (state.playing) {
+        const raw = Math.max(0, (player.getCurrentTime() - state.startSec) * 1000);
+        state.accumulatedMs += Math.round(raw);
+      }
       stopPlay();
       ui.videoWrapper.classList.add("is-obscured");
       await cueVideo(state.currentSong.video_id);
