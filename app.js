@@ -161,7 +161,8 @@
       songId: null
     },
     timeoutId: null,
-    accumulatedMs: 0,  // Reload前の経過時間の累積
+    accumulatedMs: 0,       // Reload前の経過時間の累積
+    expectedDuration: 0,    // 本編の再生時間（広告判定に使用）
     songTimes: [],     // marathon: 曲ごとのタイム(ms)を蓄積
     selectedSong: null,   // インクリメンタルサーチで選択中の曲
     searchActiveIndex: -1, // キーボードで選択中のリスト位置
@@ -528,8 +529,10 @@
     if (state.timeoutId) clearInterval(state.timeoutId);
     state.timeoutId = setInterval(() => {
       if (!state.playing) return;
-      // 広告中は getCurrentTime() が止まるため elapsed は進まない。
-      // Reload前の累積(accumulatedMs)と合わせて10秒を判定する。
+      // getDuration() が本編の長さと一致しない場合は広告再生中 → スキップ
+      // 誤差を2秒以内で許容
+      if (Math.abs(player.getDuration() - state.expectedDuration) > 2) return;
+      // accumulatedMs（Reload前の累積）＋現在の経過時間で判定
       const elapsed = state.accumulatedMs / 1000 + (player.getCurrentTime() - state.startSec);
       if (elapsed >= 10) {
         clearInterval(state.timeoutId);
@@ -664,8 +667,9 @@
     await cueVideo(song.video_id);
 
     let maxStartSec = 0;
+    const duration = await getDurationSafe();
+    state.expectedDuration = duration;
     if (state.mode === "random") {
-      const duration = await getDurationSafe();
       maxStartSec = Math.max(0, Math.floor(duration) - 10);
     }
 
@@ -754,8 +758,9 @@
     await cueVideo(song.video_id);
 
     let maxStartSec = 0;
+    const duration = await getDurationSafe();
+    state.expectedDuration = duration;
     if (state.mode === "random") {
-      const duration = await getDurationSafe();
       maxStartSec = Math.max(0, Math.floor(duration) - 10);
     }
 
@@ -1183,6 +1188,7 @@
       stopPlay();
       ui.videoWrapper.classList.add("is-obscured");
       await cueVideo(state.currentSong.video_id);
+      state.expectedDuration = await getDurationSafe();
       beginPlay(state.startSec);
     });
 
