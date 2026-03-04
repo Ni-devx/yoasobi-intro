@@ -51,6 +51,10 @@
       status_config: "Supabase設定を入力してください",
       status_saved: "記録を保存しました",
       status_not_qualified: "Top30外でした",
+      result_rank: "あなたの順位：",
+      result_rank_1: "🥇 1位獲得！",
+      share_x: "X でシェア",
+      download_badge: "画像を保存",
       next_song: "次の曲へ →",
       cancel_game: "キャンセル",
       reload_video: "↺ 動画を再ロード（広告中） [R]",
@@ -119,6 +123,10 @@
       status_config: "Add Supabase settings",
       status_saved: "Score saved",
       status_not_qualified: "Not in Top 30",
+      result_rank: "Your rank: ",
+      result_rank_1: "🥇 1st Place!",
+      share_x: "Share on X",
+      download_badge: "Save image",
       next_song: "Next Song →",
       cancel_game: "Cancel",
       reload_video: "↺ Reload video (if an ad is playing) [R]",
@@ -158,7 +166,8 @@
       timeMs: null,
       scope: null,
       mode: null,
-      songId: null
+      songId: null,
+      rank: null
     },
     accumulatedMs: 0,     // PLAYING状態の累積時間（Date.now()ベース）
     lastPlayStart: null,  // 最後にPLAYINGになった時刻（Date.now()）
@@ -221,7 +230,12 @@
     reloadVideoBtn: document.getElementById("reload-video-btn"),
     howToPlayBtn: document.getElementById("how-to-play-btn"),
     howToPlayOverlay: document.getElementById("how-to-play-overlay"),
-    howToPlayClose: document.getElementById("how-to-play-close")
+    howToPlayClose: document.getElementById("how-to-play-close"),
+    resultRank: document.getElementById("result-rank"),
+    badgeBlock: document.getElementById("badge-block"),
+    badgeCanvas: document.getElementById("badge-canvas"),
+    shareXBtn: document.getElementById("share-x-btn"),
+    downloadBadgeBtn: document.getElementById("download-badge-btn")
   };
 
   const supabaseClient = hasConfig && window.supabase
@@ -389,12 +403,16 @@
       timeMs: null,
       scope: null,
       mode: null,
-      songId: null
+      songId: null,
+      rank: null
     };
     ui.resultTime.textContent = "0.000";
     ui.resultMessage.textContent = "";
     ui.resultName.value = "";
     ui.saveBlock.classList.add("hidden");
+    ui.resultRank.classList.add("hidden");
+    ui.resultRank.textContent = "";
+    ui.badgeBlock.classList.add("hidden");
   }
 
   function updateStartButton() {
@@ -1008,8 +1026,130 @@
     }
   }
 
+  async function fetchMyRank(scope, mode, songId, timeMs) {
+    if (!supabaseClient) return null;
+    let query = supabaseClient
+      .from("leaderboard")
+      .select("rank, time_ms")
+      .eq("scope", scope)
+      .eq("mode", mode)
+      .order("rank", { ascending: true });
+    if (songId) {
+      query = query.eq("song_id", songId);
+    } else {
+      query = query.is("song_id", null);
+    }
+    const { data, error } = await query;
+    if (error || !data) return null;
+    // 同タイムのうち最小ランクを返す
+    const match = data.find((row) => row.time_ms === timeMs);
+    return match ? match.rank : null;
+  }
+
+  function drawBadge(rank, timeMs, songTitle, mode, scope) {
+    const canvas = ui.badgeCanvas;
+    const ctx = canvas.getContext("2d");
+    const W = 600, H = 300;
+    canvas.width = W;
+    canvas.height = H;
+
+    // 背景グラデーション
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, "#0d0d1a");
+    bg.addColorStop(1, "#1a0828");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // 金色のトップライン
+    const lineGrad = ctx.createLinearGradient(0, 0, W, 0);
+    lineGrad.addColorStop(0, "#b8860b");
+    lineGrad.addColorStop(0.5, "#ffd700");
+    lineGrad.addColorStop(1, "#b8860b");
+    ctx.fillStyle = lineGrad;
+    ctx.fillRect(0, 0, W, 4);
+
+    // ランク
+    const rankLabel = rank === 1 ? "🥇 #1" : `#${rank}`;
+    ctx.save();
+    ctx.font = "bold 72px serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    // 金色グロー
+    ctx.shadowColor = "#ffd700";
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = "#ffd700";
+    ctx.fillText(rankLabel, W / 2, 95);
+    ctx.restore();
+
+    // 曲名 or スコープ表示
+    const label = songTitle || (scope === "marathon" ? (state.language === "ja" ? "全曲マラソン" : "Marathon") : "");
+    if (label) {
+      ctx.font = "400 22px 'Noto Sans JP', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#ccbbff";
+      // 長すぎる場合は省略
+      const maxWidth = W - 80;
+      ctx.fillText(label, W / 2, 160, maxWidth);
+    }
+
+    // タイム
+    ctx.font = "bold 44px 'DM Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(formatTime(timeMs) + "s", W / 2, 210);
+
+    // モードバッジ
+    const modeLabel = (mode === "intro" ? "Intro" : "Random") + " · " + (scope === "single" ? "Single" : "Marathon");
+    ctx.font = "500 16px 'DM Mono', monospace";
+    ctx.fillStyle = "#888899";
+    ctx.fillText(modeLabel, W / 2, 255);
+
+    // ブランディング
+    ctx.font = "300 13px sans-serif";
+    ctx.fillStyle = "#444455";
+    ctx.fillText("YOASOBI Intro Quiz  —  ni-devx.github.io/yoasobi-intro", W / 2, 284);
+  }
+
+  async function shareOrDownloadBadge() {
+    const canvas = ui.badgeCanvas;
+    const songTitle = state.result.songId
+      ? (state.language === "ja"
+          ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
+          : state.songs.find((s) => s.id === state.result.songId)?.title_en)
+      : null;
+    const tweetText = state.language === "ja"
+      ? `🥇 YOASOBI Intro Quiz で1位を獲得しました！\nタイム: ${formatTime(state.result.timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro`
+      : `🥇 I got 1st place on YOASOBI Intro Quiz!\nTime: ${formatTime(state.result.timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro`;
+
+    // Web Share API（モバイル等）が使える場合はそちらを優先
+    if (navigator.canShare) {
+      try {
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+        const file = new File([blob], "yoasobi-quiz-1st.png", { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], text: tweetText });
+          return;
+        }
+      } catch (err) {
+        // フォールバックへ
+      }
+    }
+
+    // フォールバック: 画像をダウンロード → X を開く
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = "yoasobi-quiz-1st.png";
+    a.click();
+
+    setTimeout(() => {
+      const xUrl = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(tweetText);
+      window.open(xUrl, "_blank", "noopener");
+    }, 500);
+  }
+
   async function submitScore() {
-    // FIX #7: state.result サブオブジェクトを参照
     if (!state.result.pendingScoreId) return;
     const name = ui.resultName.value.trim();
     const { data, error } = await supabaseClient.rpc("submit_score", {
@@ -1023,9 +1163,40 @@
       return;
     }
 
-    ui.resultMessage.textContent = i18n[state.language].status_saved;
     ui.saveBlock.classList.add("hidden");
     state.result.pendingScoreId = null;
+
+    // 実際の順位を取得
+    const rank = await fetchMyRank(
+      state.result.scope,
+      state.result.mode,
+      state.result.songId,
+      state.result.timeMs
+    );
+    state.result.rank = rank;
+
+    // 順位表示
+    if (rank) {
+      const rankText = i18n[state.language][rank === 1 ? "result_rank_1" : "result_rank"] +
+        (rank === 1 ? "" : `#${rank}`);
+      ui.resultRank.textContent = rankText;
+      ui.resultRank.classList.remove("hidden");
+    }
+
+    // 1位なら保存済みメッセージ＋バッジ
+    if (rank === 1) {
+      ui.resultMessage.textContent = i18n[state.language].result_rank_1;
+      const songTitle = state.result.songId
+        ? (state.language === "ja"
+            ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
+            : state.songs.find((s) => s.id === state.result.songId)?.title_en)
+        : null;
+      drawBadge(rank, state.result.timeMs, songTitle, state.result.mode, state.result.scope);
+      ui.badgeBlock.classList.remove("hidden");
+    } else {
+      ui.resultMessage.textContent = i18n[state.language].status_saved;
+    }
+
     await loadSetupLeaderboard();
     await loadRankingLeaderboard();
   }
@@ -1074,6 +1245,14 @@
       stopPlayer();
       showView("ranking");
       loadRankingLeaderboard();
+    });
+
+    ui.shareXBtn.addEventListener("click", shareOrDownloadBadge);
+    ui.downloadBadgeBtn.addEventListener("click", () => {
+      const a = document.createElement("a");
+      a.href = ui.badgeCanvas.toDataURL("image/png");
+      a.download = "yoasobi-quiz-badge.png";
+      a.click();
     });
 
     ui.startBtn.addEventListener("click", startAttempt);

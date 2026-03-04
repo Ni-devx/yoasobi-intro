@@ -155,11 +155,19 @@
         <div class="result-body">
           <div class="result-time" id="result-time">0.000</div>
           <p id="result-message" class="status"></p>
+          <p id="result-rank" class="result-rank hidden"></p>
         </div>
         <div id="save-block" class="save-block hidden">
           <label for="result-name" data-i18n="player_name">Name</label>
           <input id="result-name" type="text" maxlength="20" placeholder="Anonymous">
           <button id="save-score" class="ghost" data-i18n="save_score">Save</button>
+        </div>
+        <div id="badge-block" class="badge-block hidden">
+          <canvas id="badge-canvas"></canvas>
+          <div class="badge-actions">
+            <button id="share-x-btn" class="ghost" data-i18n="share_x">X でシェア</button>
+            <button id="download-badge-btn" class="ghost" data-i18n="download_badge">画像を保存</button>
+          </div>
         </div>
         <div class="result-actions">
           <button id="play-again" class="ghost" data-i18n="play_again">Play Again</button>

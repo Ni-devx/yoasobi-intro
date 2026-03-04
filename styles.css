@@ -502,6 +502,25 @@ button.ghost--sm {
   gap: 20px;
 }
 
+/* メインカード */
+.result-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ランクバッジ（メダル絵文字 or #N） */
+.result-rank-badge {
+  font-size: clamp(36px, 6vw, 56px);
+  line-height: 1.1;
+  min-height: 1.2em;
+}
+
+.result-rank-badge.rank--gold   { color: #c9a227; }
+.result-rank-badge.rank--silver { color: #8c9bab; }
+.result-rank-badge.rank--bronze { color: #a0522d; }
+
+/* タイム */
 .result-time {
   font-family: var(--font-mono);
   font-size: clamp(44px, 7vw, 72px);
@@ -511,6 +530,34 @@ button.ghost--sm {
   color: var(--accent);
 }
 
+/* ランクテキスト（"1位" / "#5" / "ランク外"） */
+.result-rank-text {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  min-height: 1.4em;
+}
+
+/* 曲名 */
+.result-song-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 4px;
+  min-height: 1.4em;
+}
+
+/* モード・スコープ */
+.result-mode-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-light);
+  min-height: 1.4em;
+}
+
+/* 保存ブロック */
 .save-block {
   display: grid;
   grid-template-columns: 1fr 140px;
@@ -537,6 +584,41 @@ button.ghost--sm {
   background: var(--panel-strong);
   color: var(--text);
   font-family: inherit;
+}
+
+/* シェアブロック */
+.share-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.share-block.hidden { display: none; }
+
+#share-canvas {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  display: block;
+}
+
+.share-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Xボタン：アクセントカラーで差別化 */
+#share-x {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#share-x:hover {
+  background: var(--accent);
+  color: #fff;
 }
 
 .result-actions {
@@ -740,6 +822,9 @@ button.ghost--sm {
   }
 
   .save-block { grid-template-columns: 1fr; }
+
+  .share-actions { flex-direction: column; }
+  #share-canvas { max-width: 100%; }
 
   .search-list { max-height: 200px; }
 
