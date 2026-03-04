@@ -1317,6 +1317,7 @@
         }
       }
     });
+    window.__ytPlayer = player; // ← デバッグ用に露出
   }
 
   window.onYouTubeIframeAPIReady = () => {
