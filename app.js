@@ -974,23 +974,42 @@
     return data || [];
   }
 
-  function showResultLeaderboard(rows, playerTimeMs, savedName) {
+  // skipInsert=true: rows に既にプレイヤーのスコアが含まれているので挿入しない
+  function showResultLeaderboard(rows, playerTimeMs, savedName, skipInsert) {
     ui.resultLeaderboard.classList.remove("hidden");
     ui.leaderboardResult.innerHTML = "";
 
-    const youLabel = savedName || (state.language === "ja" ? "▶ あなた" : "▶ You");
-    const playerEntry = { display_name: youLabel, time_ms: playerTimeMs, isPlayer: true };
+    const youLabel = savedName || (state.language === "ja" ? "\u25b6 \u3042\u306a\u305f" : "\u25b6 You");
 
-    // 既存ランキングにプレイヤーを挿入
-    const merged = [...rows];
-    const insertIdx = merged.findIndex((r) => r.time_ms > playerTimeMs);
-    if (insertIdx === -1) merged.push(playerEntry);
-    else merged.splice(insertIdx, 0, playerEntry);
+    let merged;
+    let pIdx;
 
-    // 表示範囲: プレイヤーを中心に最大 10 行
+    if (skipInsert) {
+      // 保存済み: rows の中から自分の行を特定してハイライト
+      merged = rows.map((r) => {
+        const isPlayer = r.time_ms === playerTimeMs &&
+          (r.display_name === savedName || (!savedName && r.display_name === "Anonymous"));
+        return { ...r, isPlayer };
+      });
+      pIdx = merged.findIndex((r) => r.isPlayer);
+      // 見つからない場合は time_ms だけで判定
+      if (pIdx === -1) {
+        pIdx = merged.findIndex((r) => r.time_ms === playerTimeMs);
+        if (pIdx !== -1) merged[pIdx] = { ...merged[pIdx], isPlayer: true };
+      }
+    } else {
+      // 未保存: プレイヤー仮エントリを挿入
+      const playerEntry = { display_name: youLabel, time_ms: playerTimeMs, isPlayer: true };
+      merged = [...rows];
+      const insertIdx = merged.findIndex((r) => r.time_ms > playerTimeMs);
+      if (insertIdx === -1) merged.push(playerEntry);
+      else merged.splice(insertIdx, 0, playerEntry);
+      pIdx = merged.findIndex((r) => r.isPlayer);
+    }
+
     const MAX = 10;
-    const pIdx = merged.findIndex((r) => r.isPlayer);
-    let start = Math.max(0, pIdx - Math.floor(MAX / 2));
+    const centerIdx = pIdx === -1 ? 0 : pIdx;
+    let start = Math.max(0, centerIdx - Math.floor(MAX / 2));
     let end = Math.min(merged.length, start + MAX);
     if (end - start < MAX) start = Math.max(0, end - MAX);
 
@@ -998,9 +1017,10 @@
       const tr = document.createElement("tr");
       if (row.isPlayer) tr.classList.add("result-my-row");
       const displayRank = start + i + 1;
+      const name = row.isPlayer && !skipInsert ? youLabel : (row.display_name || "Anonymous");
       tr.innerHTML = `
         <td>${displayRank}</td>
-        <td>${row.isPlayer ? youLabel : (row.display_name || "Anonymous")}</td>
+        <td>${name}</td>
         <td>${formatTime(row.time_ms)}</td>
       `;
       ui.leaderboardResult.appendChild(tr);
@@ -1276,7 +1296,7 @@
       state.result.mode,
       state.result.scope === "single" ? state.result.songId : null
     );
-    showResultLeaderboard(rows, state.result.timeMs, savedName);
+    showResultLeaderboard(rows, state.result.timeMs, savedName, true);
 
     // 1位ならバッジを表示
     if (rank === 1) {
