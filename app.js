@@ -161,8 +161,8 @@
       songId: null
     },
     timeoutId: null,
-    accumulatedMs: 0,       // [FIX] Reload前の経過時間の累積（チート防止）
-    expectedDuration: 0,    // [FIX] 本編の再生時間（広告判定に使用）
+    accumulatedMs: 0,     // [FIX] 本編の実際の再生時間を積算（広告・Reloadを自動除外）
+    lastCurrentTime: 0,   // [FIX] delta計算用：直前のgetCurrentTime()値
     songTimes: [],     // marathon: 曲ごとのタイム(ms)を蓄積
     selectedSong: null,   // インクリメンタルサーチで選択中の曲
     searchActiveIndex: -1, // キーボードで選択中のリスト位置
@@ -234,6 +234,11 @@
   let songsLoaded = false;
   let cueResolver = null;
   let mediaSessionInterval = null; // [FIX] MediaSession 上書き用インターバル
+
+  // [FIX] 本編視聴時間の積算（広告中は getCurrentTime() が進まないため自然に除外される）
+  let watchInterval = null;  // 差分積算用インターバル
+  let lastCurrentTime = 0;   // 前回ポーリング時の getCurrentTime()
+  let watchedMs = 0;         // 現アテンプトの本編視聴時間（ms）
 
   function normalizeAnswer(text) {
     return (text || "")
@@ -369,14 +374,19 @@
       clearInterval(mediaSessionInterval);
       mediaSessionInterval = null;
     }
+    // [FIX] 差分積算インターバルを停止
+    if (watchInterval) {
+      clearInterval(watchInterval);
+      watchInterval = null;
+    }
     ui.videoWrapper.classList.remove("is-obscured");
   }
 
   function resetAttempt() {
     state.attemptId = null;
     state.startSec = 0;
-    state.accumulatedMs = 0;    // [FIX] 累積タイムをリセット
-    state.expectedDuration = 0; // [FIX] 本編長さをリセット
+    state.accumulatedMs = 0;   // [FIX] 積算タイムをリセット
+    state.lastCurrentTime = 0;
     stopPlay();
   }
 
@@ -517,28 +527,30 @@
   // ────────────────────────────────────────────────────────────
 
   // 経過時間をミリ秒で返す
-  // Intro: getCurrentTime() - 0、Random: getCurrentTime() - startSec
-  // [FIX] accumulatedMs（Reload前の累積）を加算
+  // [FIX] getCurrentTime()のdeltaを積算した accumulatedMs を返す
+  //       広告中はdeltaが0になるため自動的に除外される
   function getElapsedMs() {
-    if (!player) return 1;
-    const current = (player.getCurrentTime() - state.startSec) * 1000;
-    return Math.max(1, Math.round(state.accumulatedMs + current));
+    return Math.max(1, Math.round(state.accumulatedMs));
   }
 
   // タイムアウト監視（setInterval で 100ms ごとにポーリング）
-  // [FIX] getDuration() が本編の長さと一致しない場合は広告中とみなしてスキップ
-  //       accumulatedMs（Reload前の累積）も合算して判定
+  // [FIX] getCurrentTime()のdeltaを積算する方式
+  //       広告中はdeltaが0のため加算されない → 広告時間が自動除外される
+  //       Reloadしても accumulatedMs が引き継がれるためチート不可
   function startTimeoutWatch() {
     if (state.timeoutId) clearInterval(state.timeoutId);
+    state.lastCurrentTime = player.getCurrentTime();
     state.timeoutId = setInterval(() => {
       if (!state.playing) return;
-      // getDuration() が本編の長さと一致しない場合は広告再生中 → スキップ
-      // 誤差2秒以内を許容
-      const dur = player.getDuration();
-      if (state.expectedDuration > 0 && Math.abs(dur - state.expectedDuration) > 2) return;
-      // accumulatedMs（Reload前の累積）＋現在の経過時間で10秒判定
-      const elapsed = state.accumulatedMs / 1000 + (player.getCurrentTime() - state.startSec);
-      if (elapsed >= 10) {
+      const currentTime = player.getCurrentTime();
+      const delta = currentTime - state.lastCurrentTime;
+      // delta > 0: 本編が実際に進んだ（広告中・一時停止中はdelta≒0）
+      // delta < 1.5: シークや大きなジャンプは除外
+      if (delta > 0 && delta < 1.5) {
+        state.accumulatedMs += delta * 1000;
+      }
+      state.lastCurrentTime = currentTime;
+      if (state.accumulatedMs >= 10000) {
         clearInterval(state.timeoutId);
         state.timeoutId = null;
         handleTimeout();
@@ -606,6 +618,7 @@
     state.playing = true;
     state.startSec = startSec || 0;
     state.selectedSong = null;
+    watchedMs = 0;           // [FIX] この曲の本編視聴時間をリセット（Reload後も含む）
     ui.videoWrapper.classList.add("is-obscured");
     setStatus("status_playing");
 
@@ -670,12 +683,9 @@
     ui.videoWrapper.classList.add("is-obscured");
     await cueVideo(song.video_id);
 
-    // [FIX] 常に本編の長さを取得して保存（広告判定に使用）
-    const duration = await getDurationSafe();
-    state.expectedDuration = duration;
-
     let maxStartSec = 0;
     if (state.mode === "random") {
+      const duration = await getDurationSafe();
       maxStartSec = Math.max(0, Math.floor(duration) - 10);
     }
 
@@ -763,12 +773,9 @@
     setQuizActive(true);
     await cueVideo(song.video_id);
 
-    // [FIX] 常に本編の長さを取得して保存（広告判定に使用）
-    const duration = await getDurationSafe();
-    state.expectedDuration = duration;
-
     let maxStartSec = 0;
     if (state.mode === "random") {
+      const duration = await getDurationSafe();
       maxStartSec = Math.max(0, Math.floor(duration) - 10);
     }
 
@@ -1186,25 +1193,13 @@
 
     // 広告が流れているときに動画を再ロードするボタン
     // IFrame API には広告スキップメソッドがないため、動画を再キューして再試行する
+    // [FIX] accumulatedMs はdelta積算方式のため広告中はすでに加算されていない。
+    //       Reload時も特別な処理は不要で、そのまま引き継がれる。
     ui.reloadVideoBtn.addEventListener("click", async () => {
       if (!state.currentSong || !player) return;
-      // [FIX] Reload前の経過時間を累積してチート防止
-      // 広告中は getDuration() が本編と一致しないため elapsed は 0 に近い値になるが
-      // 本編再生中に Reload した場合は正しく累積される
-      if (state.playing) {
-        const dur = player.getDuration();
-        const isMainVideo = state.expectedDuration === 0 ||
-          Math.abs(dur - state.expectedDuration) <= 2;
-        if (isMainVideo) {
-          const raw = Math.max(0, (player.getCurrentTime() - state.startSec) * 1000);
-          state.accumulatedMs += Math.round(raw);
-        }
-      }
       stopPlay();
       ui.videoWrapper.classList.add("is-obscured");
       await cueVideo(state.currentSong.video_id);
-      // [FIX] Reload後も本編の長さを再取得して更新
-      state.expectedDuration = await getDurationSafe();
       beginPlay(state.startSec);
     });
 
@@ -1294,6 +1289,26 @@
           if (cueResolver && event.data === YT.PlayerState.CUED) {
             cueResolver();
             cueResolver = null;
+          }
+          // [FIX] 本編視聴時間の差分積算
+          // 広告中は getCurrentTime() が進まないため delta=0 となり加算されない
+          if (event.data === YT.PlayerState.PLAYING) {
+            lastCurrentTime = player.getCurrentTime();
+            if (watchInterval) clearInterval(watchInterval);
+            watchInterval = setInterval(() => {
+              if (!state.playing) return;
+              const currentTime = player.getCurrentTime();
+              const delta = currentTime - lastCurrentTime;
+              if (delta > 0 && delta < 1.5) {
+                watchedMs += delta * 1000;
+              }
+              lastCurrentTime = currentTime;
+            }, 1000);
+          } else {
+            if (watchInterval) {
+              clearInterval(watchInterval);
+              watchInterval = null;
+            }
           }
         }
       }
