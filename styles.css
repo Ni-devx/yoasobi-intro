@@ -621,6 +621,53 @@ button.ghost--sm {
   color: #fff;
 }
 
+/* ─── Result leaderboard ─── */
+.result-leaderboard {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.result-leaderboard__label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 12px 4px;
+  margin: 0;
+}
+
+.result-leaderboard table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.result-leaderboard th {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.result-leaderboard td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+}
+
+.result-leaderboard tbody tr:last-child td { border-bottom: none; }
+
+/* プレイヤー自身の行をハイライト */
+.result-my-row td {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .result-actions {
   display: flex;
   gap: 10px;

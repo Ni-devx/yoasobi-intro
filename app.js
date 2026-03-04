@@ -232,6 +232,8 @@
     howToPlayOverlay: document.getElementById("how-to-play-overlay"),
     howToPlayClose: document.getElementById("how-to-play-close"),
     resultRank: document.getElementById("result-rank"),
+    resultLeaderboard: document.getElementById("result-leaderboard"),
+    leaderboardResult: document.getElementById("leaderboard-body-result"),
     badgeBlock: document.getElementById("badge-block"),
     badgeCanvas: document.getElementById("badge-canvas"),
     shareXBtn: document.getElementById("share-x-btn"),
@@ -413,6 +415,8 @@
     ui.resultRank.classList.add("hidden");
     ui.resultRank.textContent = "";
     ui.badgeBlock.classList.add("hidden");
+    ui.resultLeaderboard.classList.add("hidden");
+    ui.leaderboardResult.innerHTML = "";
   }
 
   function updateStartButton() {
@@ -955,6 +959,64 @@
     });
   }
 
+  async function loadLeaderboardData(scope, mode, songId) {
+    if (!supabaseClient) return [];
+    let query = supabaseClient
+      .from("leaderboard")
+      .select("rank, display_name, time_ms, song_id, scope")
+      .eq("scope", scope)
+      .eq("mode", mode)
+      .order("rank", { ascending: true });
+    if (scope === "single") query = query.eq("song_id", songId);
+    else query = query.is("song_id", null);
+    const { data, error } = await query;
+    if (error) return [];
+    return data || [];
+  }
+
+  function showResultLeaderboard(rows, playerTimeMs, savedName) {
+    ui.resultLeaderboard.classList.remove("hidden");
+    ui.leaderboardResult.innerHTML = "";
+
+    const youLabel = savedName || (state.language === "ja" ? "▶ あなた" : "▶ You");
+    const playerEntry = { display_name: youLabel, time_ms: playerTimeMs, isPlayer: true };
+
+    // 既存ランキングにプレイヤーを挿入
+    const merged = [...rows];
+    const insertIdx = merged.findIndex((r) => r.time_ms > playerTimeMs);
+    if (insertIdx === -1) merged.push(playerEntry);
+    else merged.splice(insertIdx, 0, playerEntry);
+
+    // 表示範囲: プレイヤーを中心に最大 10 行
+    const MAX = 10;
+    const pIdx = merged.findIndex((r) => r.isPlayer);
+    let start = Math.max(0, pIdx - Math.floor(MAX / 2));
+    let end = Math.min(merged.length, start + MAX);
+    if (end - start < MAX) start = Math.max(0, end - MAX);
+
+    merged.slice(start, end).forEach((row, i) => {
+      const tr = document.createElement("tr");
+      if (row.isPlayer) tr.classList.add("result-my-row");
+      const displayRank = start + i + 1;
+      tr.innerHTML = `
+        <td>${displayRank}</td>
+        <td>${row.isPlayer ? youLabel : (row.display_name || "Anonymous")}</td>
+        <td>${formatTime(row.time_ms)}</td>
+      `;
+      ui.leaderboardResult.appendChild(tr);
+    });
+
+    if (!merged.length) {
+      const emptyRow = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 3;
+      cell.className = "empty";
+      cell.textContent = i18n[state.language].ranking_empty;
+      emptyRow.appendChild(cell);
+      ui.leaderboardResult.appendChild(emptyRow);
+    }
+  }
+
   async function loadLeaderboard(scope, mode, songId, container) {
     if (!supabaseClient) return;
     let query = supabaseClient
@@ -1011,18 +1073,42 @@
       ui.resultTime.textContent = "-";
       ui.resultMessage.textContent = i18n[state.language].status_failed;
       ui.saveBlock.classList.add("hidden");
+      ui.resultLeaderboard.classList.add("hidden");
       return;
     }
 
     ui.resultTime.textContent = formatTime(timeMs);
     ui.resultMessage.textContent = i18n[state.language].status_correct;
 
-    // FIX #7: state.result サブオブジェクトを参照
     if (state.result.pendingScoreId) {
       ui.saveBlock.classList.remove("hidden");
     } else {
       ui.saveBlock.classList.add("hidden");
       ui.resultMessage.textContent = i18n[state.language].status_not_qualified;
+    }
+
+    // ランキングをすぐに読み込み、プレイヤーの予測順位を表示
+    if (supabaseClient && state.result.scope) {
+      const rows = await loadLeaderboardData(
+        state.result.scope,
+        state.result.mode,
+        state.result.scope === "single" ? state.result.songId : null
+      );
+
+      // プレイヤーより速いスコアの数 + 1 = 予測順位
+      const betterCount = rows.filter((r) => r.time_ms < timeMs).length;
+      const projectedRank = betterCount + 1;
+      state.result.rank = projectedRank;
+
+      if (state.result.pendingScoreId) {
+        const rankLabel = projectedRank === 1
+          ? i18n[state.language].result_rank_1
+          : i18n[state.language].result_rank + `#${projectedRank}`;
+        ui.resultRank.textContent = rankLabel;
+        ui.resultRank.classList.remove("hidden");
+      }
+
+      showResultLeaderboard(rows, timeMs, null);
     }
   }
 
@@ -1175,7 +1261,7 @@
     );
     state.result.rank = rank;
 
-    // 順位表示
+    // 順位表示を更新
     if (rank) {
       const rankText = i18n[state.language][rank === 1 ? "result_rank_1" : "result_rank"] +
         (rank === 1 ? "" : `#${rank}`);
@@ -1183,7 +1269,16 @@
       ui.resultRank.classList.remove("hidden");
     }
 
-    // 1位なら保存済みメッセージ＋バッジ
+    // ランキングテーブルを保存後の名前で再描画
+    const savedName = ui.resultName.value.trim() || "Anonymous";
+    const rows = await loadLeaderboardData(
+      state.result.scope,
+      state.result.mode,
+      state.result.scope === "single" ? state.result.songId : null
+    );
+    showResultLeaderboard(rows, state.result.timeMs, savedName);
+
+    // 1位ならバッジを表示
     if (rank === 1) {
       ui.resultMessage.textContent = i18n[state.language].result_rank_1;
       const songTitle = state.result.songId
