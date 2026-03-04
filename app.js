@@ -523,12 +523,14 @@
   }
 
   // タイムアウト監視（setInterval で 100ms ごとにポーリング）
-  // 広告中は本編の getCurrentTime() が進まないため 10 秒カウントも止まる
+  // 広告中は video_id が変わるためスキップし、実際の再生時間のみカウント
   function startTimeoutWatch() {
     if (state.timeoutId) clearInterval(state.timeoutId);
     state.timeoutId = setInterval(() => {
       if (!state.playing) return;
-      const elapsed = player.getCurrentTime() - state.startSec;
+      // 広告中は getCurrentTime() が止まるため elapsed は進まない。
+      // Reload前の累積(accumulatedMs)と合わせて10秒を判定する。
+      const elapsed = state.accumulatedMs / 1000 + (player.getCurrentTime() - state.startSec);
       if (elapsed >= 10) {
         clearInterval(state.timeoutId);
         state.timeoutId = null;
@@ -1173,8 +1175,8 @@
     // IFrame API には広告スキップメソッドがないため、動画を再キューして再試行する
     ui.reloadVideoBtn.addEventListener("click", async () => {
       if (!state.currentSong || !player) return;
-      // Reload前の経過時間を累積してチート防止
-      if (state.playing) {
+      // 広告中でなく本編再生中のみ経過時間を累積する（広告時間は加算しない）
+      if (state.playing && player.getVideoData()?.video_id === state.currentSong.video_id) {
         const raw = Math.max(0, (player.getCurrentTime() - state.startSec) * 1000);
         state.accumulatedMs += Math.round(raw);
       }
