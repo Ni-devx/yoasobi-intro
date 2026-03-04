@@ -161,6 +161,8 @@
       songId: null
     },
     timeoutId: null,
+    accumulatedMs: 0,       // [FIX] Reload前の経過時間の累積（チート防止）
+    expectedDuration: 0,    // [FIX] 本編の再生時間（広告判定に使用）
     songTimes: [],     // marathon: 曲ごとのタイム(ms)を蓄積
     selectedSong: null,   // インクリメンタルサーチで選択中の曲
     searchActiveIndex: -1, // キーボードで選択中のリスト位置
@@ -231,6 +233,7 @@
   let youtubeReady = false;
   let songsLoaded = false;
   let cueResolver = null;
+  let mediaSessionInterval = null; // [FIX] MediaSession 上書き用インターバル
 
   function normalizeAnswer(text) {
     return (text || "")
@@ -361,12 +364,19 @@
       clearInterval(state.timeoutId);
       state.timeoutId = null;
     }
+    // [FIX] MediaSession 上書きインターバルを停止
+    if (mediaSessionInterval) {
+      clearInterval(mediaSessionInterval);
+      mediaSessionInterval = null;
+    }
     ui.videoWrapper.classList.remove("is-obscured");
   }
 
   function resetAttempt() {
     state.attemptId = null;
     state.startSec = 0;
+    state.accumulatedMs = 0;    // [FIX] 累積タイムをリセット
+    state.expectedDuration = 0; // [FIX] 本編長さをリセット
     stopPlay();
   }
 
@@ -508,20 +518,26 @@
 
   // 経過時間をミリ秒で返す
   // Intro: getCurrentTime() - 0、Random: getCurrentTime() - startSec
-  // 広告中・バッファリング中は本編の getCurrentTime() が進まないため自然に停止する
+  // [FIX] accumulatedMs（Reload前の累積）を加算
   function getElapsedMs() {
     if (!player) return 1;
-    const elapsed = (player.getCurrentTime() - state.startSec) * 1000;
-    return Math.max(1, Math.round(elapsed));
+    const current = (player.getCurrentTime() - state.startSec) * 1000;
+    return Math.max(1, Math.round(state.accumulatedMs + current));
   }
 
   // タイムアウト監視（setInterval で 100ms ごとにポーリング）
-  // 広告中は本編の getCurrentTime() が進まないため 10 秒カウントも止まる
+  // [FIX] getDuration() が本編の長さと一致しない場合は広告中とみなしてスキップ
+  //       accumulatedMs（Reload前の累積）も合算して判定
   function startTimeoutWatch() {
     if (state.timeoutId) clearInterval(state.timeoutId);
     state.timeoutId = setInterval(() => {
       if (!state.playing) return;
-      const elapsed = player.getCurrentTime() - state.startSec;
+      // getDuration() が本編の長さと一致しない場合は広告再生中 → スキップ
+      // 誤差2秒以内を許容
+      const dur = player.getDuration();
+      if (state.expectedDuration > 0 && Math.abs(dur - state.expectedDuration) > 2) return;
+      // accumulatedMs（Reload前の累積）＋現在の経過時間で10秒判定
+      const elapsed = state.accumulatedMs / 1000 + (player.getCurrentTime() - state.startSec);
       if (elapsed >= 10) {
         clearInterval(state.timeoutId);
         state.timeoutId = null;
@@ -592,6 +608,18 @@
     state.selectedSong = null;
     ui.videoWrapper.classList.add("is-obscured");
     setStatus("status_playing");
+
+    // [FIX] MediaSession のタイトル・サムネイルを非表示にする（Control Center対策）
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = null;
+      if (mediaSessionInterval) clearInterval(mediaSessionInterval);
+      mediaSessionInterval = setInterval(() => {
+        if (navigator.mediaSession.metadata !== null) {
+          navigator.mediaSession.metadata = null;
+        }
+      }, 500);
+    }
+
     // クイズ開始時に入力欄をクリアしてフォーカス
     ui.answerInput.value = "";
     closeSearch();
@@ -642,9 +670,12 @@
     ui.videoWrapper.classList.add("is-obscured");
     await cueVideo(song.video_id);
 
+    // [FIX] 常に本編の長さを取得して保存（広告判定に使用）
+    const duration = await getDurationSafe();
+    state.expectedDuration = duration;
+
     let maxStartSec = 0;
     if (state.mode === "random") {
-      const duration = await getDurationSafe();
       maxStartSec = Math.max(0, Math.floor(duration) - 10);
     }
 
@@ -732,9 +763,12 @@
     setQuizActive(true);
     await cueVideo(song.video_id);
 
+    // [FIX] 常に本編の長さを取得して保存（広告判定に使用）
+    const duration = await getDurationSafe();
+    state.expectedDuration = duration;
+
     let maxStartSec = 0;
     if (state.mode === "random") {
-      const duration = await getDurationSafe();
       maxStartSec = Math.max(0, Math.floor(duration) - 10);
     }
 
@@ -1154,9 +1188,23 @@
     // IFrame API には広告スキップメソッドがないため、動画を再キューして再試行する
     ui.reloadVideoBtn.addEventListener("click", async () => {
       if (!state.currentSong || !player) return;
+      // [FIX] Reload前の経過時間を累積してチート防止
+      // 広告中は getDuration() が本編と一致しないため elapsed は 0 に近い値になるが
+      // 本編再生中に Reload した場合は正しく累積される
+      if (state.playing) {
+        const dur = player.getDuration();
+        const isMainVideo = state.expectedDuration === 0 ||
+          Math.abs(dur - state.expectedDuration) <= 2;
+        if (isMainVideo) {
+          const raw = Math.max(0, (player.getCurrentTime() - state.startSec) * 1000);
+          state.accumulatedMs += Math.round(raw);
+        }
+      }
       stopPlay();
       ui.videoWrapper.classList.add("is-obscured");
       await cueVideo(state.currentSong.video_id);
+      // [FIX] Reload後も本編の長さを再取得して更新
+      state.expectedDuration = await getDurationSafe();
       beginPlay(state.startSec);
     });
 
