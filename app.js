@@ -67,7 +67,7 @@
       popup_tips_title: "ヒント",
       popup_tip_1: "曲名を入力して候補から選択。",
       popup_tip_2: "広告が流れている場合は [R] キーで再ロード。",
-      popup_tip_3: "10秒以内に答えないと失敗になります。",
+      popup_tip_3: "広告が流れている場合、タイマーは自動で停止します。",
       footer_repo: "View source on GitHub",
       hidden: "非表示"
     },
@@ -135,7 +135,7 @@
       popup_tips_title: "Tips",
       popup_tip_1: "Type a song name and select from the suggestions.",
       popup_tip_2: "If an ad is playing, press [R] to reload the video.",
-      popup_tip_3: "You have 10 seconds to answer or it counts as a miss.",
+      popup_tip_3: "If an ad is playing, the timer pauses automatically.",
       footer_repo: "View source on GitHub",
       hidden: "Hidden"
     }
@@ -160,9 +160,8 @@
       mode: null,
       songId: null
     },
-    timeoutId: null,
-    accumulatedMs: 0,     // [FIX] 本編の実際の再生時間を積算（広告・Reloadを自動除外）
-    lastCurrentTime: 0,   // [FIX] delta計算用：直前のgetCurrentTime()値
+    accumulatedMs: 0,     // PLAYING状態の累積時間（Date.now()ベース）
+    lastPlayStart: null,  // 最後にPLAYINGになった時刻（Date.now()）
     songTimes: [],     // marathon: 曲ごとのタイム(ms)を蓄積
     selectedSong: null,   // インクリメンタルサーチで選択中の曲
     searchActiveIndex: -1, // キーボードで選択中のリスト位置
@@ -235,10 +234,7 @@
   let cueResolver = null;
   let mediaSessionInterval = null; // [FIX] MediaSession 上書き用インターバル
 
-  // [FIX] 本編視聴時間の積算（広告中は getCurrentTime() が進まないため自然に除外される）
-  let watchInterval = null;  // 差分積算用インターバル
-  let lastCurrentTime = 0;   // 前回ポーリング時の getCurrentTime()
-  let watchedMs = 0;         // 現アテンプトの本編視聴時間（ms）
+
 
   function normalizeAnswer(text) {
     return (text || "")
@@ -363,21 +359,17 @@
   }
 
   function stopPlay() {
+    // PLAYING中だった場合、ここで累積を確定する
+    if (state.lastPlayStart !== null) {
+      state.accumulatedMs += Date.now() - state.lastPlayStart;
+      state.lastPlayStart = null;
+    }
     state.playing = false;
     state.submitting = false;
-    if (state.timeoutId) {
-      clearInterval(state.timeoutId);
-      state.timeoutId = null;
-    }
-    // [FIX] MediaSession 上書きインターバルを停止
+    // MediaSession 上書きインターバルを停止
     if (mediaSessionInterval) {
       clearInterval(mediaSessionInterval);
       mediaSessionInterval = null;
-    }
-    // [FIX] 差分積算インターバルを停止
-    if (watchInterval) {
-      clearInterval(watchInterval);
-      watchInterval = null;
     }
     ui.videoWrapper.classList.remove("is-obscured");
   }
@@ -385,8 +377,8 @@
   function resetAttempt() {
     state.attemptId = null;
     state.startSec = 0;
-    state.accumulatedMs = 0;   // [FIX] 積算タイムをリセット
-    state.lastCurrentTime = 0;
+    state.accumulatedMs = 0;
+    state.lastPlayStart = null;
     stopPlay();
   }
 
@@ -526,37 +518,17 @@
   }
   // ────────────────────────────────────────────────────────────
 
-  // 経過時間をミリ秒で返す
-  // [FIX] getCurrentTime()のdeltaを積算した accumulatedMs を返す
-  //       広告中はdeltaが0になるため自動的に除外される
+  // 経過時間をミリ秒で返す（wall-clock × PLAYING状態の累積）
+  // 広告中・BUFFERING中・Reload中は lastPlayStart が null のため加算されない
   function getElapsedMs() {
-    return Math.max(1, Math.round(state.accumulatedMs));
+    let ms = state.accumulatedMs;
+    if (state.lastPlayStart !== null) {
+      ms += Date.now() - state.lastPlayStart;
+    }
+    return Math.max(1, Math.round(ms));
   }
 
-  // タイムアウト監視（setInterval で 100ms ごとにポーリング）
-  // [FIX] getCurrentTime()のdeltaを積算する方式
-  //       広告中はdeltaが0のため加算されない → 広告時間が自動除外される
-  //       Reloadしても accumulatedMs が引き継がれるためチート不可
-  function startTimeoutWatch() {
-    if (state.timeoutId) clearInterval(state.timeoutId);
-    state.lastCurrentTime = player.getCurrentTime();
-    state.timeoutId = setInterval(() => {
-      if (!state.playing) return;
-      const currentTime = player.getCurrentTime();
-      const delta = currentTime - state.lastCurrentTime;
-      // delta > 0: 本編が実際に進んだ（広告中・一時停止中はdelta≒0）
-      // delta < 1.5: シークや大きなジャンプは除外
-      if (delta > 0 && delta < 1.5) {
-        state.accumulatedMs += delta * 1000;
-      }
-      state.lastCurrentTime = currentTime;
-      if (state.accumulatedMs >= 10000) {
-        clearInterval(state.timeoutId);
-        state.timeoutId = null;
-        handleTimeout();
-      }
-    }, 100);
-  }
+
 
   function stopPlayer() {
     if (player && typeof player.stopVideo === "function") {
@@ -564,29 +536,17 @@
     }
   }
 
-  async function cleanupTimeout() {
+  async function cleanupAttempt() {
     if (!supabaseClient || !state.attemptId) return;
     try {
       await supabaseClient.rpc("finish_attempt", {
         p_attempt_id: state.attemptId,
         p_answer_norm: "",
-        p_time_ms: 10000
+        p_time_ms: getElapsedMs()
       });
     } catch (error) {
       console.warn(error);
     }
-  }
-
-  async function handleTimeout() {
-    if (!state.playing) return;
-    stopPlay();
-    setStatus("status_timeout");
-    updateNowPlaying(true);
-    await cleanupTimeout();
-    resetAttempt();
-    resetRun();
-    updateProgress();
-    showResult(false, null);
   }
 
   async function cueVideo(videoId) {
@@ -617,8 +577,9 @@
   function beginPlay(startSec) {
     state.playing = true;
     state.startSec = startSec || 0;
+    state.accumulatedMs = 0;
+    state.lastPlayStart = null;
     state.selectedSong = null;
-    watchedMs = 0;           // [FIX] この曲の本編視聴時間をリセット（Reload後も含む）
     ui.videoWrapper.classList.add("is-obscured");
     setStatus("status_playing");
 
@@ -643,8 +604,6 @@
       player.seekTo(startSec || 0, true);
       player.playVideo();
     }
-
-    startTimeoutWatch();
   }
 
   async function startSingle() {
@@ -746,10 +705,6 @@
   }
 
   async function startMarathonSong() {
-    // marathon は曲ごとにストップウォッチをリセット（各曲タイムの総和が最終スコア）
-    state.accumulatedMs = 0;
-    watchedMs = 0;
-
     if (!state.runId || !state.nextSongId) {
       setStatus("status_error");
       resetRun();
@@ -1185,8 +1140,7 @@
     });
 
     ui.cancelBtn.addEventListener("click", async () => {
-      // 計測中のアテンプトをサーバー側でキャンセル（タイムアウト扱い）
-      await cleanupTimeout();
+      await cleanupAttempt();
       stopPlay();
       resetAttempt();
       resetRun();
@@ -1294,30 +1248,22 @@
             cueResolver();
             cueResolver = null;
           }
-          // [FIX] 本編視聴時間の差分積算
-          // 広告中は getCurrentTime() が進まないため delta=0 となり加算されない
+          if (!state.playing) return;
           if (event.data === YT.PlayerState.PLAYING) {
-            lastCurrentTime = player.getCurrentTime();
-            if (watchInterval) clearInterval(watchInterval);
-            watchInterval = setInterval(() => {
-              if (!state.playing) return;
-              const currentTime = player.getCurrentTime();
-              const delta = currentTime - lastCurrentTime;
-              if (delta > 0 && delta < 1.5) {
-                watchedMs += delta * 1000;
-              }
-              lastCurrentTime = currentTime;
-            }, 1000);
+            // PLAYING になった瞬間にwall-clock計測を開始
+            if (state.lastPlayStart === null) {
+              state.lastPlayStart = Date.now();
+            }
           } else {
-            if (watchInterval) {
-              clearInterval(watchInterval);
-              watchInterval = null;
+            // PLAYING以外（広告=UNSTARTED、BUFFERING等）になった瞬間に累積確定
+            if (state.lastPlayStart !== null) {
+              state.accumulatedMs += Date.now() - state.lastPlayStart;
+              state.lastPlayStart = null;
             }
           }
         }
       }
     });
-    window.__ytPlayer = player; // ← デバッグ用に露出
   }
 
   window.onYouTubeIframeAPIReady = () => {
