@@ -53,6 +53,9 @@
       status_not_qualified: "Top30外でした",
       result_rank: "あなたの順位：",
       result_rank_1: "🥇 1位獲得！",
+      congrats_title: "おめでとうございます！",
+      congrats_subtitle: "Top 30 ランクイン！",
+      save_hint: "名前を入力してランキングに登録",
       share_x: "X でシェア",
       download_badge: "画像を保存",
       next_song: "次の曲へ →",
@@ -125,6 +128,9 @@
       status_not_qualified: "Not in Top 30",
       result_rank: "Your rank: ",
       result_rank_1: "🥇 1st Place!",
+      congrats_title: "Congratulations!",
+      congrats_subtitle: "You made the Top 30!",
+      save_hint: "Enter your name to save your score",
       share_x: "Share on X",
       download_badge: "Save image",
       next_song: "Next Song →",
@@ -237,7 +243,11 @@
     badgeBlock: document.getElementById("badge-block"),
     badgeCanvas: document.getElementById("badge-canvas"),
     shareXBtn: document.getElementById("share-x-btn"),
-    downloadBadgeBtn: document.getElementById("download-badge-btn")
+    downloadBadgeBtn: document.getElementById("download-badge-btn"),
+    congratsBlock: document.getElementById("congrats-block"),
+    congratsRankDisplay: document.getElementById("congrats-rank-display"),
+    congratsSummary: document.getElementById("congrats-summary"),
+    congratsSubtitle: document.getElementById("congrats-subtitle")
   };
 
   const supabaseClient = hasConfig && window.supabase
@@ -417,6 +427,10 @@
     ui.badgeBlock.classList.add("hidden");
     ui.resultLeaderboard.classList.add("hidden");
     ui.leaderboardResult.innerHTML = "";
+    // Congrats block reset
+    ui.congratsBlock.classList.add("hidden");
+    ui.congratsRankDisplay.textContent = "";
+    ui.congratsSummary.textContent = "";
   }
 
   function updateStartButton() {
@@ -1093,42 +1107,73 @@
       ui.resultTime.textContent = "-";
       ui.resultMessage.textContent = i18n[state.language].status_failed;
       ui.saveBlock.classList.add("hidden");
+      ui.congratsBlock.classList.add("hidden");
       ui.resultLeaderboard.classList.add("hidden");
       return;
     }
 
     ui.resultTime.textContent = formatTime(timeMs);
-    ui.resultMessage.textContent = i18n[state.language].status_correct;
 
-    if (state.result.pendingScoreId) {
-      ui.saveBlock.classList.remove("hidden");
-    } else {
-      ui.saveBlock.classList.add("hidden");
-      ui.resultMessage.textContent = i18n[state.language].status_not_qualified;
-    }
-
-    // ランキングをすぐに読み込み、プレイヤーの予測順位を表示
+    // ランキングデータを取得して予測順位を計算
+    let rows = [];
+    let projectedRank = null;
     if (supabaseClient && state.result.scope) {
-      const rows = await loadLeaderboardData(
+      rows = await loadLeaderboardData(
         state.result.scope,
         state.result.mode,
         state.result.scope === "single" ? state.result.songId : null
       );
-
-      // プレイヤーより速いスコアの数 + 1 = 予測順位
       const betterCount = rows.filter((r) => r.time_ms < timeMs).length;
-      const projectedRank = betterCount + 1;
+      projectedRank = betterCount + 1;
       state.result.rank = projectedRank;
+    }
 
-      if (state.result.pendingScoreId) {
-        const rankLabel = projectedRank === 1
-          ? i18n[state.language].result_rank_1
-          : i18n[state.language].result_rank + `#${projectedRank}`;
-        ui.resultRank.textContent = rankLabel;
-        ui.resultRank.classList.remove("hidden");
+    if (state.result.pendingScoreId) {
+      // ── Top 30 ランクイン！おめでとう画面を表示 ──
+      ui.resultMessage.textContent = "";
+      ui.congratsBlock.classList.remove("hidden");
+
+      // 順位表示
+      const rankLabel = projectedRank === 1
+        ? i18n[state.language].result_rank_1
+        : `#${projectedRank}`;
+      ui.congratsRankDisplay.textContent = rankLabel;
+      if (ui.congratsSubtitle) {
+        ui.congratsSubtitle.textContent = i18n[state.language].congrats_subtitle;
       }
 
-      showResultLeaderboard(rows, timeMs, null);
+      // サマリー（モード・スコープ・曲名）
+      const songTitle = state.result.songId
+        ? (state.language === "ja"
+            ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
+            : state.songs.find((s) => s.id === state.result.songId)?.title_en)
+        : null;
+      const modeLabel = state.result.mode === "intro"
+        ? i18n[state.language].mode_intro
+        : i18n[state.language].mode_random;
+      const scopeLabel = state.result.scope === "single"
+        ? i18n[state.language].scope_single
+        : i18n[state.language].scope_marathon;
+      ui.congratsSummary.textContent = [modeLabel, scopeLabel, songTitle].filter(Boolean).join(" · ");
+
+      // バッジを予測順位で先描画して即表示
+      drawBadge(projectedRank, timeMs, songTitle, state.result.mode, state.result.scope);
+      ui.badgeBlock.classList.remove("hidden");
+
+      // 保存ブロックを表示
+      ui.saveBlock.classList.remove("hidden");
+
+      // 予測順位込みのランキングテーブルを表示
+      showResultLeaderboard(rows, timeMs, null, false);
+    } else {
+      // Top30外
+      ui.resultMessage.textContent = i18n[state.language].status_not_qualified;
+      ui.congratsBlock.classList.add("hidden");
+      ui.saveBlock.classList.add("hidden");
+      // ランキングテーブルだけ表示（自分のエントリなし）
+      if (rows.length > 0) {
+        showResultLeaderboard(rows, null, null, true);
+      }
     }
   }
 
@@ -1218,22 +1263,28 @@
     ctx.fillText("YOASOBI Intro Quiz  —  ni-devx.github.io/yoasobi-intro", W / 2, 284);
   }
 
-  async function shareOrDownloadBadge() {
-    const canvas = ui.badgeCanvas;
+  // X シェア専用（バッジの強制ダウンロードなし）
+  async function shareOnX() {
+    const rank = state.result.rank;
+    const timeMs = state.result.timeMs;
     const songTitle = state.result.songId
       ? (state.language === "ja"
           ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
           : state.songs.find((s) => s.id === state.result.songId)?.title_en)
       : null;
-    const tweetText = state.language === "ja"
-      ? `🥇 YOASOBI Intro Quiz で1位を獲得しました！\nタイム: ${formatTime(state.result.timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro`
-      : `🥇 I got 1st place on YOASOBI Intro Quiz!\nTime: ${formatTime(state.result.timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro`;
 
-    // Web Share API（モバイル等）が使える場合はそちらを優先
+    const rankStr = rank === 1
+      ? (state.language === "ja" ? "🥇 1位" : "🥇 1st place")
+      : (state.language === "ja" ? `#${rank}位` : `#${rank}`);
+    const tweetText = state.language === "ja"
+      ? `YOASOBI Intro Quiz で${rankStr}を獲得！\nタイム: ${formatTime(timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro #YOASOBIIntroQuiz`
+      : `I ranked ${rankStr} on YOASOBI Intro Quiz!\nTime: ${formatTime(timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro #YOASOBIIntroQuiz`;
+
+    // モバイル等で Web Share API（ファイル共有）が使える場合はそちらを優先
     if (navigator.canShare) {
       try {
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-        const file = new File([blob], "yoasobi-quiz-1st.png", { type: "image/png" });
+        const blob = await new Promise((resolve) => ui.badgeCanvas.toBlob(resolve, "image/png"));
+        const file = new File([blob], "yoasobi-quiz-badge.png", { type: "image/png" });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file], text: tweetText });
           return;
@@ -1243,20 +1294,24 @@
       }
     }
 
-    // フォールバック: 画像をダウンロード → X を開く
-    const a = document.createElement("a");
-    a.href = canvas.toDataURL("image/png");
-    a.download = "yoasobi-quiz-1st.png";
-    a.click();
+    // デスクトップ: X を直接開く（ダウンロード不要）
+    const xUrl = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(tweetText);
+    window.open(xUrl, "_blank", "noopener");
+  }
 
-    setTimeout(() => {
-      const xUrl = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(tweetText);
-      window.open(xUrl, "_blank", "noopener");
-    }, 500);
+  // バッジ画像ダウンロード専用
+  function downloadBadge() {
+    const a = document.createElement("a");
+    a.href = ui.badgeCanvas.toDataURL("image/png");
+    a.download = "yoasobi-quiz-badge.png";
+    a.click();
   }
 
   async function submitScore() {
     if (!state.result.pendingScoreId) return;
+    const saveBtn = ui.saveScore;
+    saveBtn.disabled = true;
+
     const name = ui.resultName.value.trim();
     const { data, error } = await supabaseClient.rpc("submit_score", {
       p_score_id: state.result.pendingScoreId,
@@ -1266,6 +1321,7 @@
     if (error || !data || !data[0] || data[0].status !== "ok") {
       console.error(error);
       ui.resultMessage.textContent = i18n[state.language].status_error;
+      saveBtn.disabled = false;
       return;
     }
 
@@ -1281,16 +1337,24 @@
     );
     state.result.rank = rank;
 
-    // 順位表示を更新
+    // 順位表示を確定値に更新
     if (rank) {
-      const rankText = i18n[state.language][rank === 1 ? "result_rank_1" : "result_rank"] +
-        (rank === 1 ? "" : `#${rank}`);
-      ui.resultRank.textContent = rankText;
-      ui.resultRank.classList.remove("hidden");
+      const rankLabel = rank === 1
+        ? i18n[state.language].result_rank_1
+        : `#${rank}`;
+      ui.congratsRankDisplay.textContent = rankLabel;
     }
 
-    // ランキングテーブルを保存後の名前で再描画
-    const savedName = ui.resultName.value.trim() || "Anonymous";
+    // バッジを確定順位で再描画
+    const songTitle = state.result.songId
+      ? (state.language === "ja"
+          ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
+          : state.songs.find((s) => s.id === state.result.songId)?.title_en)
+      : null;
+    drawBadge(rank, state.result.timeMs, songTitle, state.result.mode, state.result.scope);
+
+    // 保存後の名前でランキングテーブルを更新
+    const savedName = name || "Anonymous";
     const rows = await loadLeaderboardData(
       state.result.scope,
       state.result.mode,
@@ -1298,19 +1362,7 @@
     );
     showResultLeaderboard(rows, state.result.timeMs, savedName, true);
 
-    // 1位ならバッジを表示
-    if (rank === 1) {
-      ui.resultMessage.textContent = i18n[state.language].result_rank_1;
-      const songTitle = state.result.songId
-        ? (state.language === "ja"
-            ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
-            : state.songs.find((s) => s.id === state.result.songId)?.title_en)
-        : null;
-      drawBadge(rank, state.result.timeMs, songTitle, state.result.mode, state.result.scope);
-      ui.badgeBlock.classList.remove("hidden");
-    } else {
-      ui.resultMessage.textContent = i18n[state.language].status_saved;
-    }
+    ui.resultMessage.textContent = i18n[state.language].status_saved;
 
     await loadSetupLeaderboard();
     await loadRankingLeaderboard();
@@ -1362,13 +1414,8 @@
       loadRankingLeaderboard();
     });
 
-    ui.shareXBtn.addEventListener("click", shareOrDownloadBadge);
-    ui.downloadBadgeBtn.addEventListener("click", () => {
-      const a = document.createElement("a");
-      a.href = ui.badgeCanvas.toDataURL("image/png");
-      a.download = "yoasobi-quiz-badge.png";
-      a.click();
-    });
+    ui.shareXBtn.addEventListener("click", shareOnX);
+    ui.downloadBadgeBtn.addEventListener("click", downloadBadge);
 
     ui.startBtn.addEventListener("click", startAttempt);
 

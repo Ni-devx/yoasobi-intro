@@ -151,23 +151,45 @@
         <button id="lang-toggle-result" class="ghost ghost--sm lang-btn">JA / EN</button>
       </div>
       <div class="panel result-panel">
+        <!-- 常に表示：タイムと基本メッセージ -->
         <div class="result-body">
           <div class="result-time" id="result-time">0.000</div>
           <p id="result-message" class="status"></p>
           <p id="result-rank" class="result-rank hidden"></p>
         </div>
-        <div id="save-block" class="save-block hidden">
-          <label for="result-name" data-i18n="player_name">Name</label>
-          <input id="result-name" type="text" maxlength="20" placeholder="Anonymous">
-          <button id="save-score" class="ghost" data-i18n="save_score">Save</button>
-        </div>
-        <div id="badge-block" class="badge-block hidden">
-          <canvas id="badge-canvas"></canvas>
+
+        <!-- Top 30 ランクイン時のみ表示 -->
+        <div id="congrats-block" class="congrats-block hidden">
+          <div class="congrats-header">
+            <span class="congrats-emoji" aria-hidden="true">🎉</span>
+            <h3 class="congrats-title" data-i18n="congrats_title">おめでとうございます！</h3>
+            <p id="congrats-subtitle" class="congrats-subtitle" data-i18n="congrats_subtitle">Top 30 ランクイン！</p>
+            <p id="congrats-rank-display" class="congrats-rank-display"></p>
+            <p id="congrats-summary" class="congrats-summary"></p>
+          </div>
+
+          <!-- バッジ（順位確定前から表示） -->
+          <div id="badge-block" class="badge-block hidden">
+            <canvas id="badge-canvas"></canvas>
+          </div>
+
+          <!-- シェア・ダウンロードボタン -->
           <div class="badge-actions">
             <button id="share-x-btn" class="ghost" data-i18n="share_x">X でシェア</button>
             <button id="download-badge-btn" class="ghost" data-i18n="download_badge">画像を保存</button>
           </div>
+
+          <!-- 名前入力・保存（保存前のみ表示） -->
+          <div id="save-block" class="save-block hidden">
+            <p class="save-block__hint" data-i18n="save_hint">名前を入力してランキングに登録</p>
+            <div class="save-block__row">
+              <label for="result-name" class="sr-only" data-i18n="player_name">Name</label>
+              <input id="result-name" type="text" maxlength="20" placeholder="Anonymous">
+              <button id="save-score" class="ghost" data-i18n="save_score">Save</button>
+            </div>
+          </div>
         </div>
+
         <div id="result-leaderboard" class="result-leaderboard hidden">
           <p class="result-leaderboard__label" data-i18n="ranking">Ranking</p>
           <table>
