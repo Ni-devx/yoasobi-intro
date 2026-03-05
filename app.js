@@ -1280,20 +1280,6 @@
       ? `YOASOBI Intro Quiz で${rankStr}を獲得！\nタイム: ${formatTime(timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro #YOASOBIIntroQuiz`
       : `I ranked ${rankStr} on YOASOBI Intro Quiz!\nTime: ${formatTime(timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro #YOASOBIIntroQuiz`;
 
-    // モバイル等で Web Share API（ファイル共有）が使える場合はそちらを優先
-    if (navigator.canShare) {
-      try {
-        const blob = await new Promise((resolve) => ui.badgeCanvas.toBlob(resolve, "image/png"));
-        const file = new File([blob], "yoasobi-quiz-badge.png", { type: "image/png" });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], text: tweetText });
-          return;
-        }
-      } catch (err) {
-        // フォールバックへ
-      }
-    }
-
     // デスクトップ: X を直接開く（ダウンロード不要）
     const xUrl = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(tweetText);
     window.open(xUrl, "_blank", "noopener");
