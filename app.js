@@ -230,6 +230,7 @@
     rankingSong: document.getElementById("ranking-song"),
     leaderboardSetup: document.getElementById("leaderboard-body-setup"),
     leaderboardRanking: document.getElementById("leaderboard-body-ranking"),
+    rankingThSong: document.getElementById("ranking-th-song"),
     timer: document.getElementById("timer"),
     status: document.getElementById("status"),
     nowPlaying: document.getElementById("now-playing"),
@@ -324,6 +325,7 @@
     // home以外ではbodyにnot-homeクラスを付与してheader/footerを非表示にする
     document.body.classList.toggle("not-home", name !== "home");
     document.body.classList.toggle("view-setup", name === "setup");
+    document.body.classList.toggle("view-ranking", name === "ranking");
 
     // setup / home / ranking ではプレイヤーパネルを非表示にする
     const hidePlayer = name === "home" || name === "ranking" || name === "setup";
@@ -963,12 +965,15 @@
     state.submitting = false;
   }
 
-  function renderLeaderboardRows(rows, container) {
+  function renderLeaderboardRows(rows, container, scope) {
     container.innerHTML = "";
+    const isMarathon = scope === "marathon";
+    const colCount = isMarathon ? 3 : 4;
+
     if (!rows || rows.length === 0) {
       const emptyRow = document.createElement("tr");
       const cell = document.createElement("td");
-      cell.colSpan = 4;
+      cell.colSpan = colCount;
       cell.className = "empty";
       cell.textContent = i18n[state.language].ranking_empty;
       emptyRow.appendChild(cell);
@@ -978,17 +983,22 @@
 
     rows.forEach((row) => {
       const tr = document.createElement("tr");
-      const song = state.songs.find((s) => s.id === row.song_id);
-      const songLabel = row.song_id
-        ? (state.language === "ja" ? song?.title_ja : song?.title_en)
-        : "-";
-
-      tr.innerHTML = `
+      
+      let html = `
         <td>${row.rank}</td>
         <td>${row.display_name || "Anonymous"}</td>
         <td>${formatTime(row.time_ms)}</td>
-        <td>${songLabel || "-"}</td>
       `;
+
+      if (!isMarathon) {
+        const song = state.songs.find((s) => s.id === row.song_id);
+        const songLabel = row.song_id
+          ? (state.language === "ja" ? song?.title_ja : song?.title_en)
+          : "-";
+        html += `<td>${songLabel || "-"}</td>`;
+      }
+
+      tr.innerHTML = html;
       container.appendChild(tr);
     });
   }
@@ -1092,7 +1102,7 @@
       return;
     }
 
-    renderLeaderboardRows(data, container);
+    renderLeaderboardRows(data, container, scope);
     return data;
   }
 
@@ -1109,6 +1119,10 @@
     const scope = ui.rankingScope.value;
     const songId = ui.rankingSong.value || state.songs[0]?.id;
     ui.rankingSongWrap.classList.toggle("hidden", scope !== "single");
+
+    if (ui.rankingThSong) {
+      ui.rankingThSong.classList.toggle("hidden", scope === "marathon");
+    }
 
     if (scope === "single") {
       await loadLeaderboard(scope, mode, songId, ui.leaderboardRanking);
