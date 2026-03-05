@@ -5,7 +5,7 @@
   const i18n = {
     ja: {
       tagline: "非公式ファンプロジェクト",
-      subtitle: "全てのMVから出題。(2026/03/03時点)",
+      subtitle: "全てのMVから出題。(2026/03/06時点)",
       home_title: "イントロRTA",
       home_desc: "開始位置と対象を選んで挑戦。ランキングはサーバー計測です。",
       home_start: "開始",
@@ -84,7 +84,7 @@
     },
     en: {
       tagline: "Unofficial Fan Project",
-      subtitle: "All songs with MVs are included. (As of 2026/03/03)",
+      subtitle: "All songs with MVs are included. (As of 2026/03/06)",
       home_title: "Intro RTA",
       home_desc: "Choose start position and scope. Rankings are server-timed.",
       home_start: "Start",
