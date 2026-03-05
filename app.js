@@ -323,6 +323,7 @@
 
     // home以外ではbodyにnot-homeクラスを付与してheader/footerを非表示にする
     document.body.classList.toggle("not-home", name !== "home");
+    document.body.classList.toggle("view-setup", name === "setup");
 
     // setup / home / ranking ではプレイヤーパネルを非表示にする
     const hidePlayer = name === "home" || name === "ranking" || name === "setup";

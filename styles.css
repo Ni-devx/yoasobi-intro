@@ -45,7 +45,7 @@ body {
   display: flex;
   flex-direction: column;
   background-image:
-    linear-gradient(rgba(247,245,242,0.9), rgba(247,245,242,0.9)),
+    linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)),
     url('bg.webp');
   background-size: cover;
   background-position: center top;
@@ -87,7 +87,7 @@ body.not-home .home-only { display: none !important; }
   font-weight: 400;
   line-height: 1.05;
   letter-spacing: -0.01em;
-  color: var(--text);
+  color: var(--muted-light);
 }
 
 .site-header h1 em {
@@ -355,7 +355,8 @@ button.ghost--sm {
 .play-layout {
   display: flex;
   gap: 28px;
-  align-items: flex-start;
+  align-items: stretch;
+  min-height: min(68vh, 520px);
 }
 
 .play-layout__left {
@@ -363,6 +364,7 @@ button.ghost--sm {
   max-width: 56%;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 0;
 }
 
@@ -371,6 +373,7 @@ button.ghost--sm {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
 }
 
 /* quiz / result content switching */
@@ -1419,34 +1422,45 @@ body.not-home .ad-reload-area .ghost--sm:hover {
   box-shadow: none;
 }
 
+body.view-setup {
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(8, 7, 13, 0.8) 0%,
+      rgba(8, 7, 13, 0.95) 100%
+    ),
+    url('bg.webp');
+  background-size: cover;
+  background-position: center top;
+  background-attachment: fixed;
+}
+
+/* setup画面：mainを縦横中央揃え */
+body.view-setup main {
+  justify-content: center;
+  align-items: center;
+}
+
+body.view-setup #view-setup {
+  width: 100%;
+  max-width: 760px;
+}
+
 /* ─────────────────────────────────────
    Setup Panel — ダーク + bg.webp
 ───────────────────────────────────── */
 body.not-home .setup-panel {
-  background-color: transparent;
-  background-image: url('bg.webp');
-  background-size: cover;
-  background-position: center top;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background-color: rgba(8, 7, 13, 0.45);
+  background-image: none;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
   border-color: rgba(255,255,255,0.1);
 }
 
-/* 左から右へ暗くなるグラデーションオーバーレイ */
+/* setup-panel内のグラデーションオーバーレイは不要になるので除去 */
 body.not-home .setup-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to right,
-    rgba(8, 7, 13, 0.88) 0%,
-    rgba(8, 7, 13, 0.75) 30%,
-    rgba(8, 7, 13, 0.88) 65%,
-    rgba(8, 7, 13, 0.97) 100%
-  );
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 body.not-home .setup-left { position: relative; z-index: 1; }
