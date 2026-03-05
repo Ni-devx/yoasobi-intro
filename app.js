@@ -76,7 +76,11 @@
       popup_tip_2: "広告が流れている場合は [R] キーで再ロード。",
       popup_tip_3: "広告が流れている場合、タイマーは自動で停止します。",
       footer_repo: "View source on GitHub",
-      hidden: "非表示"
+      hidden: "非表示",
+      how_to_play_hint: "初めての方はこちら →",
+      show_badge: "バッジを保存",
+      badge_popup_title: "Badge",
+      download_badge: "画像を保存"
     },
     en: {
       tagline: "Unofficial Fan Project",
@@ -151,7 +155,11 @@
       popup_tip_2: "If an ad is playing, press [R] to reload the video.",
       popup_tip_3: "If an ad is playing, the timer pauses automatically.",
       footer_repo: "View source on GitHub",
-      hidden: "Hidden"
+      hidden: "Hidden",
+      how_to_play_hint: "New to the quiz? How to play →",
+      show_badge: "Save Badge",
+      badge_popup_title: "Badge",
+      download_badge: "Save Image"
     }
   };
 
@@ -226,6 +234,12 @@
     status: document.getElementById("status"),
     nowPlaying: document.getElementById("now-playing"),
     progress: document.getElementById("progress"),
+    progressWrap: document.getElementById("progress-wrap"),
+    quizContent: document.getElementById("quiz-content"),
+    resultContent: document.getElementById("result-content"),
+    showBadgeBtn: document.getElementById("show-badge-btn"),
+    badgePopupOverlay: document.getElementById("badge-popup-overlay"),
+    badgePopupClose: document.getElementById("badge-popup-close"),
     overlay: document.getElementById("video-overlay"),
     videoWrapper: document.getElementById("video-wrapper"),
     langToggle: document.getElementById("lang-toggle"),
@@ -314,6 +328,13 @@
     const hidePlayer = name === "home" || name === "ranking" || name === "setup";
     ui.playerPanel.classList.toggle("hidden", hidePlayer);
 
+    // クイズコンテンツ vs 結果コンテンツの切り替え
+    if (!hidePlayer) {
+      const isResult = name === "result";
+      if (ui.quizContent)  ui.quizContent.classList.toggle("hidden", isResult);
+      if (ui.resultContent) ui.resultContent.classList.toggle("hidden", !isResult);
+    }
+
     if (name === "setup") {
       updateStartButton();
     }
@@ -337,6 +358,7 @@
   }
 
   function updateNowPlaying(reveal) {
+    if (!ui.nowPlaying) return;
     if (!state.currentSong || !reveal) {
       ui.nowPlaying.textContent = i18n[state.language].hidden;
       return;
@@ -347,14 +369,10 @@
 
   function updateProgress() {
     if (state.scope === "marathon" && state.runTotal > 0) {
-      ui.progress.textContent = `${state.runPosition} / ${state.runTotal}`;
+      if (ui.progress) ui.progress.textContent = `${state.runPosition} / ${state.runTotal}`;
       return;
     }
-    if (state.scope === "single" && state.currentSong) {
-      ui.progress.textContent = "1 / 1";
-      return;
-    }
-    ui.progress.textContent = "-";
+    if (ui.progress) ui.progress.textContent = "-";
   }
 
   function setMode(mode) {
@@ -371,6 +389,7 @@
       btn.classList.toggle("active", btn.dataset.scope === scope);
     });
     ui.setupRanking.classList.toggle("hidden", scope === "single");
+    ui.playerPanel.classList.toggle("marathon-mode", scope === "marathon");
     updateProgress();
     updateStartButton();
     loadSetupLeaderboard();
@@ -1156,9 +1175,8 @@
         : i18n[state.language].scope_marathon;
       ui.congratsSummary.textContent = [modeLabel, scopeLabel, songTitle].filter(Boolean).join(" · ");
 
-      // バッジを予測順位で先描画して即表示
+      // バッジを予測順位で先描画（ポップアップで表示）
       drawBadge(projectedRank, timeMs, songTitle, state.result.mode, state.result.scope);
-      ui.badgeBlock.classList.remove("hidden");
 
       // 保存ブロックを表示
       ui.saveBlock.classList.remove("hidden");
@@ -1403,6 +1421,23 @@
     ui.shareXBtn.addEventListener("click", shareOnX);
     ui.downloadBadgeBtn.addEventListener("click", downloadBadge);
 
+    // バッジポップアップ
+    if (ui.showBadgeBtn) {
+      ui.showBadgeBtn.addEventListener("click", () => {
+        ui.badgePopupOverlay.classList.add("is-open");
+      });
+    }
+    if (ui.badgePopupClose) {
+      ui.badgePopupClose.addEventListener("click", () => {
+        ui.badgePopupOverlay.classList.remove("is-open");
+      });
+    }
+    if (ui.badgePopupOverlay) {
+      ui.badgePopupOverlay.addEventListener("click", (e) => {
+        if (e.target === ui.badgePopupOverlay) ui.badgePopupOverlay.classList.remove("is-open");
+      });
+    }
+
     ui.startBtn.addEventListener("click", startAttempt);
 
     // インクリメンタルサーチのイベント
@@ -1443,6 +1478,16 @@
         if (active) {
           const song = state.songs.find((s) => s.id === active.dataset.songId);
           if (song) selectAndSubmit(song);
+        } else if (state.selectedSong && state.playing && !state.submitting) {
+          // 候補をクリック選択済みで再度 Enter を押した場合
+          submitAnswer();
+        } else {
+          // アクティブ項目なし・未選択の場合は先頭の候補を送信
+          const firstItem = ui.searchList.querySelector("li");
+          if (firstItem) {
+            const song = state.songs.find((s) => s.id === firstItem.dataset.songId);
+            if (song) selectAndSubmit(song);
+          }
         }
       } else if (e.key === "Escape") {
         closeSearch();

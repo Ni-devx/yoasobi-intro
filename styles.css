@@ -131,10 +131,36 @@ main {
 
 .home-panel__actions {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: stretch;
+  max-width: 280px;
 }
+
+.home-panel__actions .ghost {
+  text-align: center;
+  padding: 14px 20px;
+  font-size: 14px;
+}
+
+.home-panel__hint {
+  margin-top: 20px;
+}
+
+.text-link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s;
+}
+.text-link:hover { color: var(--accent); }
 
 /* ─────────────────────────────────────────
    Page nav
@@ -227,7 +253,68 @@ button.ghost--sm {
 }
 
 /* ─────────────────────────────────────────
-   Controls (setup)
+   Progress wrap (marathon only)
+───────────────────────────────────────── */
+.progress-wrap {
+  display: none;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.player-panel.marathon-mode .progress-wrap {
+  display: flex;
+}
+
+.progress-wrap .label {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+/* ─────────────────────────────────────────
+   Setup panel — bg.webp two-column layout
+───────────────────────────────────────── */
+.setup-panel {
+  padding: 0 !important;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: 280px;
+}
+
+.setup-left {
+  width: 300px;
+  flex-shrink: 0;
+  padding: 32px 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.setup-left .controls {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-bottom: 0;
+}
+
+.start-btn-full {
+  width: 100%;
+  text-align: center;
+  padding: 11px 16px;
+}
+
+.setup-panel > .ranking-table {
+  flex: 1;
+  padding: 28px 24px;
+  position: relative;
+  z-index: 1;
+  overflow-x: auto;
+}
+
+/* Controls (setup)
 ───────────────────────────────────────── */
 .controls {
   display: grid;
@@ -261,9 +348,36 @@ button.ghost--sm {
 }
 
 /* ─────────────────────────────────────────
-   Player panel
+   Player panel — two-column layout
 ───────────────────────────────────────── */
 .player-panel { margin-bottom: 8px; }
+
+.play-layout {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+.play-layout__left {
+  flex: 0 0 56%;
+  max-width: 56%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.play-layout__right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* quiz / result content switching */
+.quiz-content,
+.result-content { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.quiz-content.hidden,
+.result-content.hidden { display: none; }
 
 .player-panel .timer-area,
 .player-panel .answer-area { display: none; }
@@ -433,9 +547,8 @@ button.ghost--sm {
 ───────────────────────────────────────── */
 .ranking-controls {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .ranking-table {
@@ -473,6 +586,31 @@ button.ghost--sm {
   text-align: center;
   color: var(--muted);
   padding: 32px;
+}
+
+/* ─────────────────────────────────────────
+   Inline Result — right column of play-layout
+───────────────────────────────────────── */
+.result-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.result-nav__title {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.result-body {
+  text-align: center;
+  padding: 8px 0;
 }
 
 /* ─────────────────────────────────────────
@@ -543,12 +681,19 @@ button.ghost--sm {
 
 .save-block input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 2px solid var(--accent);
   background: var(--panel-strong);
   color: var(--text);
   font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.save-block input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .share-block { display: flex; flex-direction: column; gap: 12px; }
@@ -645,15 +790,15 @@ button.ghost--sm {
   position: fixed;
   inset: 0;
   z-index: 500;
-  background: rgba(26,23,20,0.4);
-  backdrop-filter: blur(4px);
+  background: rgba(26,23,20,0.5);
+  backdrop-filter: blur(6px);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 24px;
+  padding: 0;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.25s ease;
   overflow-y: auto;
 }
 
@@ -662,13 +807,13 @@ button.ghost--sm {
 .popup {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 36px 32px 28px;
-  max-width: 480px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 32px 28px 40px;
+  max-width: 600px;
   width: 100%;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.14);
-  transform: translateY(8px);
-  transition: transform 0.2s ease;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.14);
+  transform: translateY(30px);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   position: relative;
 }
 
@@ -797,14 +942,12 @@ button.ghost--sm {
   }
 
   .home-panel__actions {
-    flex-direction: column;
-    align-items: stretch;
+    max-width: 100%;
   }
 
   .home-panel__actions .ghost {
-    text-align: center;
-    padding: 14px 16px;
     font-size: 14px;
+    padding: 14px 16px;
   }
 
   /* ── ページナビ ── */
@@ -824,10 +967,17 @@ button.ghost--sm {
   }
 
   /* ── セットアップ ── */
-  .controls {
-    grid-template-columns: 1fr;
-    gap: 14px;
-    margin-bottom: 18px;
+  .setup-left {
+    width: 100%;
+    padding: 24px 20px;
+  }
+
+  .setup-panel {
+    flex-direction: column;
+  }
+
+  .setup-panel > .ranking-table {
+    border-top: 1px solid rgba(255,255,255,0.08);
   }
 
   /* ── プレイヤーパネル：画面幅フル ── */
@@ -840,14 +990,23 @@ button.ghost--sm {
     padding: 16px var(--space-page-x-sm) 20px;
   }
 
+  /* 2カラム → 1カラム積み */
+  .play-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .play-layout__left {
+    flex: none;
+    max-width: 100%;
+    width: 100%;
+  }
+
   .sub-nav {
     flex-wrap: wrap;
     gap: 6px;
     margin-bottom: 12px;
   }
-
-  .video-meta { font-size: 11px; gap: 5px; }
-  .video-meta .divider { display: none; }
 
   /* ── 動画：アスペクト比維持 ── */
   .video-wrapper {
@@ -856,6 +1015,27 @@ button.ghost--sm {
     aspect-ratio: 16 / 9;
     border-radius: var(--radius-sm);
   }
+
+  /* ランキングパネル：縦積み */
+  .ranking-panel {
+    flex-direction: column;
+  }
+
+  .ranking-left {
+    width: 100%;
+    padding: 20px 18px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .ranking-right { padding: 16px 16px; }
+
+  .ranking-controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .ranking-control { flex: 1 1 140px; }
 
   /* ── タイマー ── */
   .timer-area { margin-top: 14px; }
@@ -934,34 +1114,13 @@ button.ghost--sm {
 
   .badge-actions .ghost { text-align: center; }
 
-  /* ── ポップアップ：ボトムシート風 ── */
-  .popup-overlay {
-    padding: 0;
-    align-items: flex-end;
-  }
-
+  /* ── ポップアップ：既に常にボトムシート ── */
   .popup {
-    padding: 28px 20px 36px;
-    border-radius: var(--radius) var(--radius) 0 0;
-    max-width: 100%;
-    margin-top: auto;
-    transform: translateY(24px);
-  }
-
-  .popup-overlay.is-open .popup {
-    transform: translateY(0);
+    padding: 28px 20px 40px;
   }
 
   .popup__title {
-    font-size: 18px;
-    margin-bottom: 16px;
-    padding-right: 36px; /* ✕ ボタンと被らないよう */
-  }
-
-  .popup__section p,
-  .popup__section li {
-    font-size: 12px;
-    line-height: 1.75;
+    padding-right: 36px;
   }
 }
 
@@ -1261,6 +1420,122 @@ body.not-home .ad-reload-area .ghost--sm:hover {
 }
 
 /* ─────────────────────────────────────
+   Setup Panel — ダーク + bg.webp
+───────────────────────────────────── */
+body.not-home .setup-panel {
+  background-color: transparent;
+  background-image: url('bg.webp');
+  background-size: cover;
+  background-position: center top;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  border-color: rgba(255,255,255,0.1);
+}
+
+/* 左から右へ暗くなるグラデーションオーバーレイ */
+body.not-home .setup-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(8, 7, 13, 0.88) 0%,
+    rgba(8, 7, 13, 0.75) 30%,
+    rgba(8, 7, 13, 0.88) 65%,
+    rgba(8, 7, 13, 0.97) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.not-home .setup-left { position: relative; z-index: 1; }
+body.not-home .setup-panel > .ranking-table { position: relative; z-index: 1; }
+
+/* ─────────────────────────────────────────
+   Ranking Panel — ダーク + bg.webp
+───────────────────────────────────────── */
+.ranking-panel {
+  padding: 0 !important;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: 240px;
+}
+
+.ranking-left {
+  width: 220px;
+  flex-shrink: 0;
+  padding: 28px 24px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ranking-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ranking-control label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.ranking-right {
+  flex: 1;
+  padding: 24px 20px;
+  position: relative;
+  z-index: 1;
+  overflow-x: auto;
+}
+
+body.not-home .ranking-panel {
+  background-color: transparent;
+  background-image: url('bg.webp');
+  background-size: cover;
+  background-position: center top;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: rgba(255,255,255,0.1);
+}
+
+body.not-home .ranking-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(8, 7, 13, 0.88) 0%,
+    rgba(8, 7, 13, 0.75) 30%,
+    rgba(8, 7, 13, 0.88) 65%,
+    rgba(8, 7, 13, 0.97) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.not-home .ranking-left,
+body.not-home .ranking-right { position: relative; z-index: 1; }
+
+/* ─────────────────────────────────────
+   Result Nav — ダーク
+───────────────────────────────────── */
+body.not-home .result-nav {
+  border-bottom-color: var(--border);
+}
+
+body.not-home .result-nav__title { color: var(--muted-light); }
+
+/* ─────────────────────────────────────
    Setup / Ranking テーブル — ダーク
 ───────────────────────────────────── */
 body.not-home .ranking-table table { color: var(--text); }
@@ -1389,49 +1664,17 @@ body.not-home .result-actions {
 
 body.not-home .congrats-block {
   position: relative;
-  background: linear-gradient(
-    135deg,
-    rgba(30, 24, 8, 0.9) 0%,
-    rgba(20, 16, 6, 0.95) 50%,
-    rgba(28, 18, 8, 0.9) 100%
-  );
-  border: 1px solid rgba(240, 192, 64, 0.25);
+  background: rgba(20, 18, 30, 0.8);
+  border: 1px solid rgba(240, 192, 64, 0.2);
   border-radius: var(--radius);
-  padding: 28px 24px 24px;
+  padding: 20px 18px 18px;
   overflow: hidden;
-  animation: congrats-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  animation: gold-pulse 3s ease-in-out infinite;
+  animation: congrats-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-/* 背景の光芒 */
-body.not-home .congrats-block::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(240,192,64,0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 30% at 10% 80%, rgba(232,96,62,0.08) 0%, transparent 60%);
-  pointer-events: none;
-  border-radius: inherit;
-}
+/* 背景の光芒 - removed */
 
-/* 上部ゴールドライン */
-body.not-home .congrats-block::after {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(240,192,64,0.6) 20%,
-    rgba(255,224,100,0.9) 50%,
-    rgba(240,192,64,0.6) 80%,
-    transparent 100%
-  );
-  background-size: 200% auto;
-  animation: shimmer 3s linear infinite;
-}
+/* 上部ゴールドライン - removed */
 
 .congrats-header {
   display: flex;
@@ -1444,9 +1687,8 @@ body.not-home .congrats-block::after {
 }
 
 .congrats-emoji {
-  font-size: 36px;
+  font-size: 32px;
   line-height: 1;
-  animation: float 3s ease-in-out infinite;
   display: block;
   margin-bottom: 4px;
 }
@@ -1460,19 +1702,7 @@ body.not-home .congrats-block::after {
 }
 
 body.not-home .congrats-title {
-  background: linear-gradient(
-    135deg,
-    #c8960c 0%,
-    #f0c040 30%,
-    #ffe680 60%,
-    #f0c040 80%,
-    #c8960c 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmer 4s linear infinite;
+  color: var(--gold, #f0c040);
 }
 
 .congrats-subtitle {
@@ -1498,9 +1728,8 @@ body.not-home .congrats-subtitle {
 }
 
 body.not-home .congrats-rank-display {
-  text-shadow:
-    0 0 40px rgba(240,192,64,0.5),
-    0 0 80px rgba(240,192,64,0.25);
+  color: var(--gold, #f0c040);
+  animation: rank-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both 0.2s;
 }
 
 .congrats-summary {
@@ -1581,7 +1810,6 @@ body.not-home #share-x-btn:hover {
 }
 body.not-home #share-x-btn:hover::before {
   opacity: 1;
-  animation: shimmer 1.5s linear infinite;
 }
 
 /* ダウンロードボタン — サブトル */
@@ -1697,6 +1925,33 @@ body.not-home .popup__section ul li::before { color: var(--accent); }
 body.not-home .popup__badge {
   background: var(--accent-dim);
   color: var(--accent);
+}
+
+/* ─────────────────────────────────────
+   Badge Popup
+───────────────────────────────────── */
+.badge-popup {
+  max-width: 560px;
+}
+
+.badge-block {
+  display: flex;
+  justify-content: center;
+}
+
+.badge-block canvas {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  display: block;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.badge-popup-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
 }
 
 /* ─────────────────────────────────────

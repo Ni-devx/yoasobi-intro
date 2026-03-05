@@ -27,64 +27,131 @@
 
   <main>
 
-    <!-- ── プレイヤーパネル（クイズ中のみ） ── -->
+    <!-- ── プレイヤーパネル（クイズ＋結果共通） ── -->
     <section id="player-panel" class="panel player-panel hidden">
       <div class="sub-nav">
         <button id="cancel-btn" class="ghost ghost--sm hidden" data-i18n="cancel_game">✕ キャンセル</button>
-        <div class="video-meta">
-          <span class="label" data-i18n="now_playing">Now Playing</span>
-          <span id="now-playing">-</span>
-          <span class="divider">·</span>
+        <div class="progress-wrap" id="progress-wrap">
           <span class="label" data-i18n="progress">Progress</span>
           <span id="progress">-</span>
         </div>
+        <span id="now-playing" style="display:none" aria-hidden="true"></span>
       </div>
 
-      <div class="video-area">
-        <div class="video-wrapper" id="video-wrapper">
-          <iframe
-            id="player"
-            width="640"
-            height="360"
-            src="https://www.youtube.com/embed/?enablejsapi=1&controls=1"
-            title="YouTube video player"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-          ></iframe>
-          <div class="overlay" id="video-overlay"></div>
+      <div class="play-layout">
+
+        <!-- ── 左：MV ── -->
+        <div class="play-layout__left">
+          <div class="video-wrapper" id="video-wrapper">
+            <iframe
+              id="player"
+              width="640"
+              height="360"
+              src="https://www.youtube.com/embed/?enablejsapi=1&controls=1"
+              title="YouTube video player"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+            ></iframe>
+            <div class="overlay" id="video-overlay"></div>
+          </div>
+          <div class="ad-reload-area">
+            <button id="reload-video-btn" class="ghost ghost--sm" data-i18n="reload_video">↺ 動画を再ロード（広告が流れている場合）</button>
+          </div>
         </div>
-      </div>
 
-      <div class="timer-area" id="quiz-timer" style="display:none">
-        <div id="timer" class="timer">0.000</div>
-        <div id="status" class="status" data-i18n="ready">Ready</div>
-      </div>
+        <!-- ── 右：クイズ or 結果 ── -->
+        <div class="play-layout__right">
 
-      <div class="ad-reload-area">
-        <button id="reload-video-btn" class="ghost ghost--sm" data-i18n="reload_video">↺ 動画を再ロード（広告が流れている場合）</button>
-      </div>
+          <!-- クイズコンテンツ -->
+          <div id="quiz-content" class="quiz-content">
+            <div class="timer-area" id="quiz-timer" style="display:none">
+              <div id="timer" class="timer">0.000</div>
+              <div id="status" class="status" data-i18n="ready">Ready</div>
+            </div>
+            <div class="answer-area" id="quiz-answer">
+              <div class="search-wrap" id="search-wrap">
+                <input
+                  id="answer-input"
+                  type="text"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  data-i18n-placeholder="answer_placeholder"
+                  placeholder="曲名を入力 / Type song title"
+                >
+                <ul class="search-list hidden" id="search-list"></ul>
+              </div>
+            </div>
+            <div class="next-area hidden" id="quiz-next">
+              <div id="song-time-display" class="song-time-display"></div>
+              <button id="next-btn" class="ghost" data-i18n="next_song">Next Song →</button>
+            </div>
+          </div>
 
-      <div class="answer-area" id="quiz-answer">
-        <div class="search-wrap" id="search-wrap">
-          <input
-            id="answer-input"
-            type="text"
-            autocomplete="off"
-            autocorrect="off"
-            autocapitalize="off"
-            spellcheck="false"
-            data-i18n-placeholder="answer_placeholder"
-            placeholder="曲名を入力 / Type song title"
-          >
-          <ul class="search-list hidden" id="search-list"></ul>
-        </div>
-      </div>
+          <!-- 結果コンテンツ -->
+          <div id="result-content" class="result-content hidden">
+            <div class="result-nav">
+              <button id="result-home" class="ghost ghost--sm" data-i18n="back_home">← Home</button>
+              <span class="result-nav__title" data-i18n="result_title">Result</span>
+              <button id="lang-toggle-result" class="ghost ghost--sm lang-btn">JA / EN</button>
+            </div>
 
-      <div class="next-area hidden" id="quiz-next">
-        <div id="song-time-display" class="song-time-display"></div>
-        <button id="next-btn" class="ghost" data-i18n="next_song">Next Song →</button>
-      </div>
+            <div class="result-body">
+              <div class="result-time" id="result-time">0.000</div>
+              <p id="result-message" class="status"></p>
+              <p id="result-rank" class="result-rank hidden"></p>
+            </div>
+
+            <!-- Top 30 ランクイン時 -->
+            <div id="congrats-block" class="congrats-block hidden">
+              <div class="congrats-header">
+                <span class="congrats-emoji" aria-hidden="true">🎉</span>
+                <h3 class="congrats-title" data-i18n="congrats_title">おめでとうございます！</h3>
+                <p id="congrats-subtitle" class="congrats-subtitle" data-i18n="congrats_subtitle">Top 30 ランクイン！</p>
+                <p id="congrats-rank-display" class="congrats-rank-display"></p>
+                <p id="congrats-summary" class="congrats-summary"></p>
+              </div>
+
+              <div id="save-block" class="save-block hidden">
+                <p class="save-block__hint" data-i18n="save_hint">名前を入力してランキングに登録</p>
+                <div class="save-block__row">
+                  <label for="result-name" class="sr-only" data-i18n="player_name">Name</label>
+                  <input id="result-name" type="text" maxlength="20" placeholder="Anonymous">
+                  <button id="save-score" class="ghost" data-i18n="save_score">Save</button>
+                </div>
+              </div>
+
+              <div class="badge-actions">
+                <button id="share-x-btn" class="ghost" data-i18n="share_x">X でシェア</button>
+                <button id="show-badge-btn" class="ghost" data-i18n="show_badge">バッジを保存</button>
+              </div>
+            </div>
+
+            <div id="result-leaderboard" class="result-leaderboard hidden">
+              <p class="result-leaderboard__label" data-i18n="ranking">Ranking</p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th data-i18n="player">Player</th>
+                    <th data-i18n="time">Time</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderboard-body-result"></tbody>
+              </table>
+            </div>
+
+            <!-- JS互換用（非表示） -->
+            <div class="hidden">
+              <button id="play-again">Play Again</button>
+              <button id="go-ranking-from-result">Rankings</button>
+            </div>
+          </div>
+
+        </div><!-- /.play-layout__right -->
+      </div><!-- /.play-layout -->
     </section>
 
     <!-- ── ホーム ── -->
@@ -93,7 +160,9 @@
         <div class="home-panel__actions">
           <button id="go-setup" class="ghost" data-i18n="home_start">Start</button>
           <button id="go-ranking" class="ghost" data-i18n="home_ranking">Rankings</button>
-          <button id="how-to-play-btn" class="ghost" data-i18n="how_to_play">遊び方</button>
+        </div>
+        <div class="home-panel__hint">
+          <button id="how-to-play-btn" class="text-link" data-i18n="how_to_play_hint">初めての方はこちら →</button>
         </div>
       </div>
     </section>
@@ -106,23 +175,25 @@
         <button id="lang-toggle-sub" class="ghost ghost--sm lang-btn">JA / EN</button>
       </div>
       <div class="panel setup-panel">
-        <div class="controls">
-          <div class="control">
-            <label data-i18n="mode">Start</label>
-            <div class="segmented" id="mode-toggle">
-              <button data-mode="intro" class="active" data-i18n="mode_intro">Intro</button>
-              <button data-mode="random" data-i18n="mode_random">Random</button>
+        <div class="setup-left">
+          <div class="controls">
+            <div class="control">
+              <label data-i18n="mode">Start</label>
+              <div class="segmented" id="mode-toggle">
+                <button data-mode="intro" class="active" data-i18n="mode_intro">Intro</button>
+                <button data-mode="random" data-i18n="mode_random">Random</button>
+              </div>
             </div>
-          </div>
-          <div class="control">
-            <label data-i18n="scope">Scope</label>
-            <div class="segmented" id="scope-toggle">
-              <button data-scope="single" class="active" data-i18n="scope_single">Single</button>
-              <button data-scope="marathon" data-i18n="scope_marathon">Marathon</button>
+            <div class="control">
+              <label data-i18n="scope">Scope</label>
+              <div class="segmented" id="scope-toggle">
+                <button data-scope="single" class="active" data-i18n="scope_single">Single</button>
+                <button data-scope="marathon" data-i18n="scope_marathon">Marathon</button>
+              </div>
             </div>
-          </div>
-          <div class="control">
-            <button id="start-btn" class="ghost" disabled data-i18n="start_quiz">Start Quiz</button>
+            <div class="control">
+              <button id="start-btn" class="ghost start-btn-full" disabled data-i18n="start_quiz">Start Quiz</button>
+            </div>
           </div>
         </div>
         <div id="setup-ranking" class="ranking-table hidden">
@@ -143,72 +214,8 @@
       </div>
     </section>
 
-    <!-- ── 結果 ── -->
-    <section id="view-result" class="view">
-      <div class="page-nav">
-        <button id="result-home" class="ghost ghost--sm" data-i18n="back_home">← Home</button>
-        <h2 class="page-nav__title" data-i18n="result_title">Result</h2>
-        <button id="lang-toggle-result" class="ghost ghost--sm lang-btn">JA / EN</button>
-      </div>
-      <div class="panel result-panel">
-        <!-- 常に表示：タイムと基本メッセージ -->
-        <div class="result-body">
-          <div class="result-time" id="result-time">0.000</div>
-          <p id="result-message" class="status"></p>
-          <p id="result-rank" class="result-rank hidden"></p>
-        </div>
-
-        <!-- Top 30 ランクイン時のみ表示 -->
-        <div id="congrats-block" class="congrats-block hidden">
-          <div class="congrats-header">
-            <span class="congrats-emoji" aria-hidden="true">🎉</span>
-            <h3 class="congrats-title" data-i18n="congrats_title">おめでとうございます！</h3>
-            <p id="congrats-subtitle" class="congrats-subtitle" data-i18n="congrats_subtitle">Top 30 ランクイン！</p>
-            <p id="congrats-rank-display" class="congrats-rank-display"></p>
-            <p id="congrats-summary" class="congrats-summary"></p>
-          </div>
-
-          <!-- バッジ（順位確定前から表示） -->
-          <div id="badge-block" class="badge-block hidden">
-            <canvas id="badge-canvas"></canvas>
-          </div>
-
-          <!-- シェア・ダウンロードボタン -->
-          <div class="badge-actions">
-            <button id="share-x-btn" class="ghost" data-i18n="share_x">X でシェア</button>
-            <button id="download-badge-btn" class="ghost" data-i18n="download_badge">画像を保存</button>
-          </div>
-
-          <!-- 名前入力・保存（保存前のみ表示） -->
-          <div id="save-block" class="save-block hidden">
-            <p class="save-block__hint" data-i18n="save_hint">名前を入力してランキングに登録</p>
-            <div class="save-block__row">
-              <label for="result-name" class="sr-only" data-i18n="player_name">Name</label>
-              <input id="result-name" type="text" maxlength="20" placeholder="Anonymous">
-              <button id="save-score" class="ghost" data-i18n="save_score">Save</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="result-leaderboard" class="result-leaderboard hidden">
-          <p class="result-leaderboard__label" data-i18n="ranking">Ranking</p>
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th data-i18n="player">Player</th>
-                <th data-i18n="time">Time</th>
-              </tr>
-            </thead>
-            <tbody id="leaderboard-body-result"></tbody>
-          </table>
-        </div>
-        <div class="result-actions">
-          <button id="play-again" class="ghost" data-i18n="play_again">Play Again</button>
-          <button id="go-ranking-from-result" class="ghost" data-i18n="home_ranking">Rankings</button>
-        </div>
-      </div>
-    </section>
+    <!-- ── 結果（プレイヤーパネル内に統合済み、JSビュー互換のみ） ── -->
+    <section id="view-result" class="view"></section>
 
     <!-- ── ランキング ── -->
     <section id="view-ranking" class="view">
@@ -218,20 +225,29 @@
         <button id="lang-toggle-ranking" class="ghost ghost--sm lang-btn">JA / EN</button>
       </div>
       <div class="panel ranking-panel">
-        <div class="ranking-controls">
-          <select id="ranking-mode">
-            <option value="intro">Intro</option>
-            <option value="random">Random</option>
-          </select>
-          <select id="ranking-scope">
-            <option value="single" data-i18n="scope_single">Single</option>
-            <option value="marathon" data-i18n="scope_marathon">Marathon</option>
-          </select>
-          <div id="ranking-song-wrap">
-            <select id="ranking-song"></select>
+        <div class="ranking-left">
+          <div class="ranking-controls">
+            <div class="ranking-control">
+              <label data-i18n="mode">Start</label>
+              <select id="ranking-mode">
+                <option value="intro">Intro</option>
+                <option value="random">Random</option>
+              </select>
+            </div>
+            <div class="ranking-control">
+              <label data-i18n="scope">Scope</label>
+              <select id="ranking-scope">
+                <option value="single" data-i18n="scope_single">Single</option>
+                <option value="marathon" data-i18n="scope_marathon">Marathon</option>
+              </select>
+            </div>
+            <div class="ranking-control" id="ranking-song-wrap">
+              <label data-i18n="song">Song</label>
+              <select id="ranking-song"></select>
+            </div>
           </div>
         </div>
-        <div class="ranking-table">
+        <div class="ranking-right ranking-table">
           <table>
             <thead>
               <tr>
@@ -285,6 +301,20 @@
           <li data-i18n="popup_tip_2">広告が流れている場合は <span class="popup__badge">R</span> キーで再ロード。</li>
           <li data-i18n="popup_tip_3">10秒以内に答えないと失敗になります。</li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- バッジポップアップ -->
+  <div class="popup-overlay" id="badge-popup-overlay">
+    <div class="popup badge-popup" role="dialog" aria-modal="true">
+      <button class="popup__close" id="badge-popup-close" aria-label="Close">✕</button>
+      <h2 class="popup__title" data-i18n="badge_popup_title">Badge</h2>
+      <div id="badge-block" class="badge-block">
+        <canvas id="badge-canvas"></canvas>
+      </div>
+      <div class="badge-popup-actions">
+        <button id="download-badge-btn" class="ghost" data-i18n="download_badge">画像を保存</button>
       </div>
     </div>
   </div>
