@@ -273,7 +273,8 @@
   let youtubeReady = false;
   let songsLoaded = false;
   let cueResolver = null;
-  let mediaSessionInterval = null; // [FIX] MediaSession 上書き用インターバル
+  let mediaSessionInterval = null;
+  let adWatchdog = null;
 
 
 
@@ -1640,14 +1641,35 @@
             cueResolver();
             cueResolver = null;
           }
-          if (!state.playing) return;
+
+          // 1. タイマーのクリア処理 (ここが重要)
+          if (event.data === YT.PlayerState.PLAYING) {
+            if (adWatchdog) {
+              clearTimeout(adWatchdog);
+              adWatchdog = null;
+            }
+          }
+
+          // 2. 監視タイマーのセット (UNSTARTED 時)
+          if (event.data === YT.PlayerState.UNSTARTED && state.playing) {
+            if (adWatchdog) clearTimeout(adWatchdog);
+            adWatchdog = setTimeout(() => {
+              // 念のためステータスを再確認
+              if (state.playing && player && player.getPlayerState() === -1) {
+                console.log("広告を検知、自動リロードします");
+                ui.reloadVideoBtn.click();
+              }
+            }, 2500); 
+          }
+
+          // 3. 計測ロジック
           if (event.data === YT.PlayerState.PLAYING) {
             // PLAYING になった瞬間にwall-clock計測を開始
             if (state.lastPlayStart === null) {
               state.lastPlayStart = Date.now();
             }
           } else {
-            // PLAYING以外（広告=UNSTARTED、BUFFERING等）になった瞬間に累積確定
+            // PLAYING以外になった瞬間に累積確定
             if (state.lastPlayStart !== null) {
               state.accumulatedMs += Date.now() - state.lastPlayStart;
               state.lastPlayStart = null;
@@ -1656,6 +1678,7 @@
         }
       }
     });
+    window.__ytPlayer = player;
   }
 
   window.onYouTubeIframeAPIReady = () => {
