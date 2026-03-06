@@ -82,7 +82,7 @@
       badge_popup_title: "Badge",
       download_badge: "画像を保存",
       scope_flash: "Flash",
-      popup_scope_flash: "0.5秒だけ再生→10秒以内に答える。全曲挑戦し正解数を競う。",
+      popup_scope_flash: "1.5秒だけ再生→10秒以内に答える。全曲挑戦し正解数を競う。",
       status_flash_correct: "✓ 正解!",
       status_flash_wrong: "✗ 不正解",
       status_flash_timeout: "⏰ 時間切れ",
@@ -168,7 +168,7 @@
       badge_popup_title: "Badge",
       download_badge: "Save Image",
       scope_flash: "Flash",
-      popup_scope_flash: "0.5s clip → answer within 10s. Play all songs, score by correct count.",
+      popup_scope_flash: "1.5s clip → answer within 10s. Play all songs, score by correct count.",
       status_flash_correct: "✓ Correct!",
       status_flash_wrong: "✗ Wrong",
       status_flash_timeout: "⏰ Time's up!",
@@ -213,7 +213,8 @@
     flashAnswered: 0,          // 回答済み曲数
     flashSongStartTime: null, // 曲開始のwall-clock（カウントダウン基準）
     flashCountdown: 10,       // 残り秒数表示用
-    flashCountdownTimer: null // setInterval ハンドル
+    flashCountdownTimer: null, // setInterval ハンドル
+    flashWaitingForPlay: false // Flash: 実際にPLAYING状態になるのを待っているフラグ
   };
 
   const ui = {
@@ -449,6 +450,7 @@
     }
     state.playing = false;
     state.submitting = false;
+    state.flashWaitingForPlay = false;
     // MediaSession 上書きインターバルを停止
     if (mediaSessionInterval) {
       clearInterval(mediaSessionInterval);
@@ -1042,13 +1044,9 @@
       player.seekTo(startSec, true);
       player.playVideo();
 
-      // 0.5秒後にポーズしてカウントダウン開始
-      setTimeout(() => {
-        if (!state.playing) return;
-        player.pauseVideo();
-        startFlashCountdown();
-        setTimeout(() => ui.answerInput.focus(), 50);
-      }, 500);
+      // onStateChange で実際に PLAYING になった瞬間から 1.5s 後に pause する
+      // （バッファリング完了前に pauseVideo() を呼ぶと無視されるバグを回避）
+      state.flashWaitingForPlay = true;
     }
   }
 
@@ -2037,6 +2035,23 @@
             // PLAYING になった瞬間にwall-clock計測を開始
             if (state.lastPlayStart === null) {
               state.lastPlayStart = Date.now();
+            }
+
+            // Flash: 動画が実際に PLAYING になったら 1.5s 後に pause
+            if (state.scope === "flash" && state.flashWaitingForPlay) {
+              state.flashWaitingForPlay = false;
+              setTimeout(() => {
+                if (!state.playing) return;
+                player.pauseVideo();
+                startFlashCountdown();
+                setTimeout(() => ui.answerInput.focus(), 50);
+              }, 1500);
+            }
+
+            // Flash: カウントダウン中に動画が再開されてしまった場合は強制 pause
+            if (state.scope === "flash" && !state.flashWaitingForPlay &&
+                state.flashCountdownTimer && state.playing) {
+              player.pauseVideo();
             }
           } else {
             // PLAYING以外になった瞬間に累積確定
