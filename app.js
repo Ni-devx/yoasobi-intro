@@ -1,7 +1,7 @@
 (() => {
   const config = window.APP_CONFIG || {};
   const hasConfig = Boolean(config.SUPABASE_URL && config.SUPABASE_ANON_KEY);
-  const FLASH_CLIP_SECONDS = 1.5;
+  const FLASH_CLIP_SECONDS = 1.0;
   const FLASH_CLIP_POLL_MS = 100;
 
   const i18n = {
