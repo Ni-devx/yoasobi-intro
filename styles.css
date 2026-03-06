@@ -908,6 +908,69 @@ button.ghost--sm {
 .ad-reload-area .ghost--sm { font-size: 0.75rem; opacity: 0.45; transition: opacity 0.2s; }
 .ad-reload-area .ghost--sm:hover { opacity: 1; }
 
+/* ─────────────────────────────────────
+   Flash Mode — カウントダウン
+───────────────────────────────────── */
+.flash-countdown-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 0 4px;
+}
+
+.flash-countdown {
+  font-family: var(--font-mono);
+  font-size: clamp(52px, 9vw, 76px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+
+  /* 円形バッジ */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  border: 2px solid var(--border-soft);
+  background: var(--panel-soft);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+
+  /* 色変化はスムーズに */
+  transition:
+    color        0.2s ease,
+    border-color 0.2s ease,
+    background   0.2s ease,
+    box-shadow   0.2s ease;
+
+  /* 毎秒のビート */
+  animation: flash-beat 1s ease-in-out infinite;
+}
+
+/* 残り 3 秒以下 — 赤く強調 */
+.flash-countdown.urgent {
+  color: var(--danger);
+  border-color: rgba(192, 57, 43, 0.45);
+  background: rgba(192, 57, 43, 0.06);
+  box-shadow:
+    0 0 0 5px rgba(192, 57, 43, 0.10),
+    0 2px 16px rgba(192, 57, 43, 0.15);
+  animation: flash-beat-urgent 0.5s ease-in-out infinite;
+}
+
+@keyframes flash-beat {
+  0%, 100% { transform: scale(1); }
+  10%       { transform: scale(1.05); }
+  20%       { transform: scale(1); }
+}
+
+@keyframes flash-beat-urgent {
+  0%, 100% { transform: scale(1); }
+  20%       { transform: scale(1.08); }
+  40%       { transform: scale(1); }
+}
+
 /* ══════════════════════════════════════════
    RESPONSIVE — 768px
 ══════════════════════════════════════════ */
@@ -937,6 +1000,13 @@ button.ghost--sm {
   .site-footer {
     padding: 24px var(--space-page-x-sm) 32px;
     font-size: 10px;
+  }
+
+  /* ── Flash カウントダウン ── */
+  .flash-countdown {
+    width: 96px;
+    height: 96px;
+    font-size: clamp(44px, 12vw, 60px);
   }
 
   /* ── ホームパネル ── */

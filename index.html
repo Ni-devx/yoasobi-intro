@@ -84,6 +84,10 @@
                 <ul class="search-list hidden" id="search-list"></ul>
               </div>
             </div>
+            <!-- Flash モード: カウントダウン -->
+            <div id="flash-countdown-wrap" class="flash-countdown-wrap hidden">
+              <span id="flash-countdown" class="flash-countdown">10</span>
+            </div>
             <div class="next-area hidden" id="quiz-next">
               <div id="song-time-display" class="song-time-display"></div>
               <button id="next-btn" class="ghost" data-i18n="next_song">Next Song →</button>
@@ -132,7 +136,7 @@
             <div id="result-leaderboard" class="result-leaderboard hidden">
               <p class="result-leaderboard__label" data-i18n="ranking">Ranking</p>
               <table>
-                <thead>
+                <thead id="result-leaderboard-head">
                   <tr>
                     <th>#</th>
                     <th data-i18n="player">Player</th>
@@ -189,6 +193,7 @@
               <div class="segmented" id="scope-toggle">
                 <button data-scope="single" class="active" data-i18n="scope_single">Single</button>
                 <button data-scope="marathon" data-i18n="scope_marathon">Marathon</button>
+                <button data-scope="flash" data-i18n="scope_flash">Flash</button>
               </div>
             </div>
             <div class="control">
@@ -238,6 +243,7 @@
               <select id="ranking-scope">
                 <option value="single" data-i18n="scope_single">Single</option>
                 <option value="marathon" data-i18n="scope_marathon">Marathon</option>
+                <option value="flash" data-i18n="scope_flash">Flash</option>
               </select>
             </div>
             <div class="ranking-control" id="ranking-song-wrap">

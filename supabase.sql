@@ -426,3 +426,320 @@ grant execute on function public.finish_attempt(uuid, text, integer) to anon, au
 
 grant execute on function public.finish_attempt(uuid, text, integer) to anon, authenticated;
 grant execute on function public.submit_score(uuid, text)             to anon, authenticated;
+
+-- ============================================================
+-- Flash モード追加 マイグレーション
+-- 既存 DB に対して実行してください（データは消えません）
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- 1. marathon_runs: scope と correct_count 列を追加
+-- ------------------------------------------------------------
+ALTER TABLE public.marathon_runs
+  ADD COLUMN IF NOT EXISTS scope text NOT NULL DEFAULT 'marathon',
+  ADD COLUMN IF NOT EXISTS correct_count integer NOT NULL DEFAULT 0;
+
+ALTER TABLE public.marathon_runs
+  DROP CONSTRAINT IF EXISTS marathon_runs_scope_check;
+ALTER TABLE public.marathon_runs
+  ADD CONSTRAINT marathon_runs_scope_check
+    CHECK (scope IN ('marathon', 'flash'));
+
+-- ------------------------------------------------------------
+-- 2. attempts: scope に 'flash' を追加
+-- ------------------------------------------------------------
+ALTER TABLE public.attempts
+  DROP CONSTRAINT IF EXISTS attempts_scope_check;
+ALTER TABLE public.attempts
+  ADD CONSTRAINT attempts_scope_check
+    CHECK (scope IN ('single', 'marathon', 'flash'));
+
+-- ------------------------------------------------------------
+-- 3. scores: correct_count 列追加 + 制約を更新
+-- ------------------------------------------------------------
+ALTER TABLE public.scores
+  ADD COLUMN IF NOT EXISTS correct_count integer;
+
+ALTER TABLE public.scores
+  DROP CONSTRAINT IF EXISTS scores_scope_check;
+ALTER TABLE public.scores
+  ADD CONSTRAINT scores_scope_check
+    CHECK (scope IN ('single', 'marathon', 'flash'));
+
+ALTER TABLE public.scores
+  DROP CONSTRAINT IF EXISTS scores_check;
+ALTER TABLE public.scores
+  ADD CONSTRAINT scores_check CHECK (
+    (scope = 'single'   AND song_id IS NOT NULL AND time_ms BETWEEN 1 AND 10000)
+    OR (scope = 'marathon' AND song_id IS NULL AND time_ms >= 1)
+    OR (scope = 'flash'    AND song_id IS NULL AND time_ms >= 0
+        AND correct_count IS NOT NULL)
+  );
+
+-- ------------------------------------------------------------
+-- 4. leaderboard view 更新
+--    Flash: correct_count DESC → time_ms ASC
+--    それ以外: time_ms ASC（従来通り）
+-- ------------------------------------------------------------
+CREATE OR REPLACE VIEW public.leaderboard AS
+SELECT * FROM (
+  SELECT
+    row_number() OVER (
+      PARTITION BY scope, mode, song_id
+      ORDER BY
+        CASE WHEN scope = 'flash' THEN correct_count END DESC NULLS LAST,
+        time_ms ASC,
+        created_at ASC
+    ) AS rank,
+    scope, mode, song_id, time_ms, display_name, correct_count
+  FROM public.scores
+  WHERE confirmed = true
+) ranked
+WHERE rank <= 30;
+
+GRANT SELECT ON public.leaderboard TO anon, authenticated;
+
+-- ------------------------------------------------------------
+-- 5. start_attempt 更新
+--    run の scope を引き継ぐ（'marathon' ハードコードを廃止）
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.start_attempt(
+  p_song_id       text,
+  p_mode          text,
+  p_run_id        uuid    DEFAULT NULL,
+  p_max_start_sec integer DEFAULT 0
+)
+RETURNS TABLE (attempt_id uuid, start_sec integer)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  v_scope     text;
+  v_song_pos  integer;
+  v_start_sec integer;
+  v_run       public.marathon_runs%rowtype;
+  v_id        uuid;
+BEGIN
+  IF p_mode NOT IN ('intro','random') THEN RAISE EXCEPTION 'invalid mode'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.songs WHERE id = p_song_id) THEN
+    RAISE EXCEPTION 'invalid song';
+  END IF;
+
+  IF p_run_id IS NULL THEN
+    v_scope    := 'single';
+    v_song_pos := NULL;
+  ELSE
+    SELECT * INTO v_run FROM public.marathon_runs WHERE id = p_run_id;
+    IF NOT FOUND                                        THEN RAISE EXCEPTION 'invalid run';    END IF;
+    IF v_run.status <> 'in_progress'                    THEN RAISE EXCEPTION 'run not active'; END IF;
+    IF v_run.song_order[v_run.current_pos] <> p_song_id THEN RAISE EXCEPTION 'song mismatch'; END IF;
+    v_scope    := v_run.scope;   -- 'marathon' or 'flash'
+    v_song_pos := v_run.current_pos;
+  END IF;
+
+  v_start_sec := CASE
+    WHEN p_mode = 'intro' THEN 0
+    ELSE floor(random() * (greatest(coalesce(p_max_start_sec, 0), 0) + 1))::integer
+  END;
+
+  INSERT INTO public.attempts (song_id, mode, scope, run_id, song_pos, start_sec)
+  VALUES (p_song_id, p_mode, v_scope, p_run_id, v_song_pos, v_start_sec)
+  RETURNING id INTO v_id;
+
+  attempt_id := v_id;
+  start_sec  := v_start_sec;
+  RETURN NEXT;
+END;
+$$;
+
+-- ------------------------------------------------------------
+-- 6. start_flash 新関数
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.start_flash()
+RETURNS TABLE (run_id uuid, total_songs integer, current_position integer, song_id text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  v_song_order text[];
+  v_total      integer;
+  v_run_id     uuid;
+BEGIN
+  SELECT array_agg(id ORDER BY random()) INTO v_song_order FROM public.songs;
+  v_total := coalesce(array_length(v_song_order, 1), 0);
+  IF v_total = 0 THEN RAISE EXCEPTION 'no songs'; END IF;
+
+  INSERT INTO public.marathon_runs (mode, scope, song_order, total_songs)
+  VALUES ('random', 'flash', v_song_order, v_total)
+  RETURNING id INTO v_run_id;
+
+  run_id           := v_run_id;
+  total_songs      := v_total;
+  current_position := 1;
+  song_id          := v_song_order[1];
+  RETURN NEXT;
+END;
+$$;
+
+-- ------------------------------------------------------------
+-- 7. finish_flash_song 新関数
+--    正解でも不正解でもゲーム継続。全曲終了でスコア保存。
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.finish_flash_song(
+  p_attempt_id  uuid,
+  p_answer_norm text,    -- 空文字列 = タイムアウト = 不正解
+  p_time_ms     integer  -- 曲ごとのタイム（0〜10000ms）
+)
+RETURNS TABLE (
+  status        text,         -- 'correct' / 'wrong' / 'completed'
+  is_correct    boolean,
+  next_song_id  text,
+  next_song_pos integer,
+  correct_count integer,
+  total_songs   integer,
+  total_ms      integer,      -- completed 時のみ
+  score_id      uuid
+)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  v_attempt     public.attempts%rowtype;
+  v_run         public.marathon_runs%rowtype;
+  v_correct     boolean;
+  v_next_pos    integer;
+  v_song_ms     integer;
+  v_new_total   integer;
+  v_new_correct integer;
+  v_30th        record;
+  v_score_id    uuid;
+BEGIN
+  SELECT * INTO v_attempt FROM public.attempts WHERE id = p_attempt_id;
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT 'invalid_attempt'::text, false, null::text, null::integer,
+                        null::integer, null::integer, null::integer, null::uuid;
+    RETURN;
+  END IF;
+
+  -- 回答検証（空文字列 = タイムアウト = 不正解）
+  SELECT (p_answer_norm <> '' AND p_answer_norm = ANY(s.answers_normalized))
+  INTO v_correct
+  FROM public.songs s WHERE s.id = v_attempt.song_id;
+
+  DELETE FROM public.attempts WHERE id = p_attempt_id;
+
+  -- タイムをクランプ（0〜10000ms）
+  v_song_ms := greatest(0, least(coalesce(p_time_ms, 10000), 10000));
+
+  SELECT * INTO v_run FROM public.marathon_runs WHERE id = v_attempt.run_id;
+
+  v_new_correct := v_run.correct_count + (CASE WHEN v_correct THEN 1 ELSE 0 END);
+  v_next_pos    := v_attempt.song_pos + 1;
+  v_new_total   := v_run.total_ms_so_far + v_song_ms;
+
+  IF v_next_pos > v_run.total_songs THEN
+    -- 全曲完了
+    UPDATE public.marathon_runs
+    SET status          = 'completed',
+        current_pos     = v_next_pos,
+        total_ms_so_far = v_new_total,
+        correct_count   = v_new_correct
+    WHERE id = v_run.id;
+
+    -- Top30 チェック（correct_count DESC, total_ms ASC）
+    SELECT sc.correct_count AS cc, sc.time_ms AS tm
+    INTO v_30th
+    FROM public.scores sc
+    WHERE sc.scope = 'flash'
+      AND sc.mode  = v_run.mode
+      AND sc.song_id IS NULL
+      AND sc.confirmed = true
+    ORDER BY sc.correct_count DESC, sc.time_ms ASC
+    LIMIT 1 OFFSET 29;
+
+    IF v_30th IS NULL
+       OR v_new_correct > v_30th.cc
+       OR (v_new_correct = v_30th.cc AND v_new_total < v_30th.tm)
+    THEN
+      INSERT INTO public.scores (scope, mode, song_id, time_ms, correct_count)
+      VALUES ('flash', v_run.mode, NULL, v_new_total, v_new_correct)
+      RETURNING id INTO v_score_id;
+    END IF;
+
+    RETURN QUERY SELECT
+      'completed'::text, v_correct, null::text, null::integer,
+      v_new_correct, v_run.total_songs, v_new_total, v_score_id;
+    RETURN;
+  END IF;
+
+  -- 途中: 次の曲へ（正解・不正解どちらでも継続）
+  UPDATE public.marathon_runs
+  SET current_pos     = v_next_pos,
+      total_ms_so_far = v_new_total,
+      correct_count   = v_new_correct
+  WHERE id = v_run.id;
+
+  RETURN QUERY SELECT
+    (CASE WHEN v_correct THEN 'correct' ELSE 'wrong' END)::text,
+    v_correct,
+    v_run.song_order[v_next_pos],
+    v_next_pos,
+    v_new_correct,
+    v_run.total_songs,
+    null::integer,
+    null::uuid;
+END;
+$$;
+
+-- ------------------------------------------------------------
+-- 8. submit_score 更新: Flash の trim ロジックを追加
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.submit_score(p_score_id uuid, p_display_name text)
+RETURNS TABLE (status text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  v_score public.scores%rowtype;
+BEGIN
+  SELECT * INTO v_score FROM public.scores WHERE id = p_score_id AND confirmed = false;
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT 'invalid_score'::text;
+    RETURN;
+  END IF;
+
+  UPDATE public.scores
+  SET display_name = coalesce(nullif(trim(p_display_name), ''), 'Anonymous'),
+      confirmed    = true
+  WHERE id = p_score_id;
+
+  -- Top30 超えスコアを削除
+  -- Flash: correct_count DESC → time_ms ASC
+  -- それ以外: time_ms ASC（従来通り）
+  DELETE FROM public.scores
+  WHERE id IN (
+    SELECT id FROM (
+      SELECT id,
+        row_number() OVER (
+          PARTITION BY scope, mode, song_id
+          ORDER BY
+            CASE WHEN scope = 'flash' THEN correct_count END DESC NULLS LAST,
+            time_ms ASC,
+            created_at ASC
+        ) AS rn
+      FROM public.scores
+      WHERE scope = v_score.scope AND mode = v_score.mode
+        AND (song_id = v_score.song_id
+             OR (song_id IS NULL AND v_score.song_id IS NULL))
+        AND confirmed = true
+    ) ranked
+    WHERE rn > 30
+  );
+
+  RETURN QUERY SELECT 'ok'::text;
+END;
+$$;
+
+-- ------------------------------------------------------------
+-- 9. 権限付与
+-- ------------------------------------------------------------
+GRANT EXECUTE ON FUNCTION public.start_flash()                         TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.finish_flash_song(uuid, text, integer) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.start_attempt(text, text, uuid, integer) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_score(uuid, text)              TO anon, authenticated;

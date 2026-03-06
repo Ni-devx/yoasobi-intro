@@ -80,9 +80,16 @@
       how_to_play_hint: "初めての方はこちら →",
       show_badge: "バッジを保存",
       badge_popup_title: "Badge",
-      download_badge: "画像を保存"
-    },
-    en: {
+      download_badge: "画像を保存",
+      scope_flash: "Flash",
+      popup_scope_flash: "0.5秒だけ再生→10秒以内に答える。全曲挑戦し正解数を競う。",
+      status_flash_correct: "✓ 正解!",
+      status_flash_wrong: "✗ 不正解",
+      status_flash_timeout: "⏰ 時間切れ",
+      flash_correct_col: "正解",
+      flash_result_score: "正解数",
+      flash_result_time: "合計タイム"
+    }, en: {
       tagline: "Unofficial Fan Project",
       subtitle: "All songs with MVs are included. (As of 2026/03/06)",
       home_title: "Intro RTA",
@@ -159,7 +166,15 @@
       how_to_play_hint: "New to the quiz? How to play →",
       show_badge: "Save Badge",
       badge_popup_title: "Badge",
-      download_badge: "Save Image"
+      download_badge: "Save Image",
+      scope_flash: "Flash",
+      popup_scope_flash: "0.5s clip → answer within 10s. Play all songs, score by correct count.",
+      status_flash_correct: "✓ Correct!",
+      status_flash_wrong: "✗ Wrong",
+      status_flash_timeout: "⏰ Time's up!",
+      flash_correct_col: "Correct",
+      flash_result_score: "Score",
+      flash_result_time: "Total Time"
     }
   };
 
@@ -192,7 +207,13 @@
     submitting: false, // 二重送信防止フラグ
     playerReady: false,
     statusKey: hasConfig ? "status_ready" : "status_config",
-    view: "home"
+    view: "home",
+    // Flash モード専用
+    flashCorrect: 0,          // 現在の正解数
+    flashAnswered: 0,          // 回答済み曲数
+    flashSongStartTime: null, // 曲開始のwall-clock（カウントダウン基準）
+    flashCountdown: 10,       // 残り秒数表示用
+    flashCountdownTimer: null // setInterval ハンドル
   };
 
   const ui = {
@@ -262,7 +283,10 @@
     congratsBlock: document.getElementById("congrats-block"),
     congratsRankDisplay: document.getElementById("congrats-rank-display"),
     congratsSummary: document.getElementById("congrats-summary"),
-    congratsSubtitle: document.getElementById("congrats-subtitle")
+    congratsSubtitle: document.getElementById("congrats-subtitle"),
+    flashCountdownWrap: document.getElementById("flash-countdown-wrap"),
+    flashCountdownEl: document.getElementById("flash-countdown"),
+    resultLeaderboardHead: document.getElementById("result-leaderboard-head")
   };
 
   const supabaseClient = hasConfig && window.supabase
@@ -376,6 +400,10 @@
       if (ui.progress) ui.progress.textContent = `${state.runPosition} / ${state.runTotal}`;
       return;
     }
+    if (state.scope === "flash" && state.runTotal > 0) {
+      if (ui.progress) ui.progress.textContent = `✓ ${state.flashCorrect} / ${state.flashAnswered}`;
+      return;
+    }
     if (ui.progress) ui.progress.textContent = "-";
   }
 
@@ -392,8 +420,11 @@
     ui.scopeToggle.querySelectorAll("button").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.scope === scope);
     });
+    // Flash はモード（開始位置）選択不要（常にランダム開始）
+    const modeControl = ui.modeToggle.closest(".control");
+    if (modeControl) modeControl.classList.toggle("hidden", scope === "flash");
     ui.setupRanking.classList.toggle("hidden", scope === "single");
-    ui.playerPanel.classList.toggle("marathon-mode", scope === "marathon");
+    ui.playerPanel.classList.toggle("marathon-mode", scope === "marathon" || scope === "flash");
     updateProgress();
     updateStartButton();
     loadSetupLeaderboard();
@@ -405,6 +436,9 @@
     state.runTotal = 0;
     state.nextSongId = null;
     state.songTimes = [];
+    state.flashCorrect = 0;
+    state.flashAnswered = 0;
+    state.flashSongStartTime = null;
   }
 
   function stopPlay() {
@@ -673,15 +707,13 @@
     }
     if (!await ensurePlayerReady()) {
       setStatus("status_error");
-      setQuizActive(false);
-      showView("setup");
+      setQuizActive(false); showView("setup");
       updateStartButton();
       return;
     }
     if (!player) {
       setStatus("status_error");
-      setQuizActive(false);
-      showView("setup");
+      setQuizActive(false); showView("setup");
       updateStartButton();
       return;
     }
@@ -689,12 +721,10 @@
     setStatus("status_loading");
     ui.startBtn.disabled = true;
 
-    // draw_single_song() 廃止: クライアント側でランダムに選曲
     const validSongs = state.songs.filter((s) => s.video_id);
     if (!validSongs.length) {
       setStatus("status_error");
-      setQuizActive(false);
-      showView("setup");
+      setQuizActive(false); showView("setup");
       updateStartButton();
       return;
     }
@@ -704,7 +734,6 @@
     updateNowPlaying(false);
     updateProgress();
 
-    // サムネが一瞬見えないようにcueVideo前からオーバーレイを表示
     ui.videoWrapper.classList.add("is-obscured");
     await cueVideo(song.video_id);
 
@@ -724,10 +753,7 @@
     if (error || !data || !data[0]) {
       console.error(error);
       setStatus("status_error");
-      // start_attempt 失敗時: quiz UI を表示したままにせず setup 画面へ戻す
-      // （state.playing = false のまま UI だけ表示される "submit できない" 状態を防ぐ）
-      setQuizActive(false);
-      showView("setup");
+      setQuizActive(false); showView("setup");
       updateStartButton();
       return;
     }
@@ -743,15 +769,13 @@
     }
     if (!await ensurePlayerReady()) {
       setStatus("status_error");
-      setQuizActive(false);
-      showView("setup");
+      setQuizActive(false); showView("setup");
       updateStartButton();
       return;
     }
     if (!player) {
       setStatus("status_error");
-      setQuizActive(false);
-      showView("setup");
+      setQuizActive(false); showView("setup");
       updateStartButton();
       return;
     }
@@ -766,8 +790,7 @@
     if (error || !data || !data[0]) {
       console.error(error);
       setStatus("status_error");
-      setQuizActive(false);
-      showView("setup");
+      setQuizActive(false); showView("setup");
       updateStartButton();
       return;
     }
@@ -845,8 +868,10 @@
 
     if (state.scope === "single") {
       await startSingle();
-    } else {
+    } else if (state.scope === "marathon") {
       await startMarathon();
+    } else {
+      await startFlash();
     }
   }
 
@@ -950,6 +975,233 @@
     }
   }
 
+  // ── Flash モード ──────────────────────────────────────────────
+
+  function clearFlashCountdown() {
+    if (state.flashCountdownTimer) {
+      clearInterval(state.flashCountdownTimer);
+      state.flashCountdownTimer = null;
+    }
+    if (ui.flashCountdownWrap) ui.flashCountdownWrap.classList.add("hidden");
+  }
+
+  function startFlashCountdown() {
+    state.flashCountdown = 10;
+    if (ui.flashCountdownWrap) ui.flashCountdownWrap.classList.remove("hidden");
+    if (ui.flashCountdownEl) {
+      ui.flashCountdownEl.textContent = state.flashCountdown;
+      ui.flashCountdownEl.classList.remove("urgent");
+    }
+
+    state.flashCountdownTimer = setInterval(() => {
+      state.flashCountdown -= 1;
+      if (ui.flashCountdownEl) {
+        ui.flashCountdownEl.textContent = state.flashCountdown;
+        ui.flashCountdownEl.classList.toggle("urgent", state.flashCountdown <= 3);
+      }
+      if (state.flashCountdown <= 0) {
+        clearFlashCountdown();
+        handleFlashTimeout();
+      }
+    }, 1000);
+  }
+
+  async function handleFlashTimeout() {
+    if (!state.playing || !state.attemptId) return;
+    if (state.submitting) return;
+    state.submitting = true;
+    stopPlay();
+    await finishFlashSong(""); // 空文字 = タイムアウト = 不正解
+    state.submitting = false;
+  }
+
+  // Flash: 0.5秒だけ再生してポーズ → カウントダウン開始
+  function beginFlashPlay(startSec) {
+    state.playing = true;
+    state.startSec = startSec;
+    state.lastPlayStart = null;
+    state.selectedSong = null;
+    state.flashSongStartTime = Date.now();
+    clearFlashCountdown();
+
+    ui.videoWrapper.classList.add("is-obscured");
+    setStatus("status_playing");
+
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = null;
+      if (mediaSessionInterval) clearInterval(mediaSessionInterval);
+      mediaSessionInterval = setInterval(() => {
+        if (navigator.mediaSession.metadata !== null) navigator.mediaSession.metadata = null;
+      }, 500);
+    }
+
+    ui.answerInput.value = "";
+    closeSearch();
+
+    if (player && state.currentSong?.video_id) {
+      player.seekTo(startSec, true);
+      player.playVideo();
+
+      // 0.5秒後にポーズしてカウントダウン開始
+      setTimeout(() => {
+        if (!state.playing) return;
+        player.pauseVideo();
+        startFlashCountdown();
+        setTimeout(() => ui.answerInput.focus(), 50);
+      }, 500);
+    }
+  }
+
+  async function finishFlashSong(normalized) {
+    // wall-clock タイム（曲開始 → 回答送信、max 10s）
+    const clientTimeMs = state.flashSongStartTime
+      ? Math.min(10000, Math.max(1, Date.now() - state.flashSongStartTime))
+      : 10000;
+    clearFlashCountdown();
+
+    const { data, error } = await supabaseClient.rpc("finish_flash_song", {
+      p_attempt_id: state.attemptId,
+      p_answer_norm: normalized,
+      p_time_ms: clientTimeMs
+    });
+
+    if (error || !data || !data[0]) {
+      console.error(error);
+      setStatus("status_error");
+      return;
+    }
+
+    const result = data[0];
+    const wasCorrect = result.is_correct;
+
+    // 正解数・回答数を更新
+    state.flashCorrect = result.correct_count ?? state.flashCorrect;
+    state.flashAnswered += 1;
+    updateProgress();
+    updateNowPlaying(true); // 曲名を表示
+
+    if (result.status === "completed") {
+      stopPlay();
+      setStatus(wasCorrect ? "status_flash_correct" : "status_flash_wrong");
+
+      state.result.pendingScoreId = result.score_id;
+      state.result.timeMs = result.total_ms;
+      state.result.scope = "flash";
+      state.result.mode = "random";
+      state.result.songId = null;
+      state.result.correctCount = result.correct_count;
+      state.result.totalSongs = result.total_songs;
+
+      resetRun();
+      updateProgress();
+      showResult(true, result.total_ms);
+      return;
+    }
+
+    // correct / wrong: 次の曲ボタンを表示
+    stopPlay();
+    setStatus(wasCorrect ? "status_flash_correct" : "status_flash_wrong");
+
+    const pos = state.flashAnswered;
+    ui.songTimeDisplay.textContent = wasCorrect ? `#${pos} ✓` : `#${pos} ✗`;
+
+    state.runPosition = result.next_song_pos;
+    state.nextSongId = result.next_song_id;
+
+    closeSearch();
+    ui.answerInput.value = "";
+    ui.quizAnswer.style.display = "none";
+    ui.nextArea.classList.remove("hidden");
+  }
+
+  async function startFlash() {
+    if (!supabaseClient) {
+      setStatus("status_config");
+      return;
+    }
+    if (!await ensurePlayerReady()) {
+      setStatus("status_error");
+      setQuizActive(false); showView("setup");
+      updateStartButton();
+      return;
+    }
+    if (!player) {
+      setStatus("status_error");
+      setQuizActive(false); showView("setup");
+      updateStartButton();
+      return;
+    }
+
+    setStatus("status_loading");
+    ui.startBtn.disabled = true;
+
+    const { data, error } = await supabaseClient.rpc("start_flash");
+
+    if (error || !data || !data[0]) {
+      console.error(error);
+      setStatus("status_error");
+      setQuizActive(false); showView("setup");
+      updateStartButton();
+      return;
+    }
+
+    state.runId = data[0].run_id;
+    state.runTotal = data[0].total_songs;
+    state.runPosition = data[0].current_position;
+    state.nextSongId = data[0].song_id;
+    state.flashCorrect = 0;
+    state.flashAnswered = 0;
+
+    await startFlashSong();
+  }
+
+  async function startFlashSong() {
+    // 曲ごとにリセット
+    state.accumulatedMs = 0;
+    state.lastPlayStart = null;
+    state.flashSongStartTime = null;
+
+    if (!state.runId || !state.nextSongId) {
+      setStatus("status_error"); resetRun(); updateStartButton(); return;
+    }
+
+    const song = state.songs.find((s) => s.id === state.nextSongId);
+    if (!song || !song.video_id) {
+      setStatus("status_error"); resetRun(); updateStartButton(); return;
+    }
+
+    state.currentSong = song;
+    updateNowPlaying(false);
+    updateProgress();
+
+    ui.videoWrapper.classList.add("is-obscured");
+    ui.nextArea.classList.add("hidden");
+    ui.songTimeDisplay.textContent = "";
+    clearFlashCountdown();
+    setQuizActive(true);
+    await cueVideo(song.video_id);
+
+    const duration = await getDurationSafe();
+    const maxStartSec = Math.max(0, Math.floor(duration) - 10);
+
+    const { data, error } = await supabaseClient.rpc("start_attempt", {
+      p_song_id: state.nextSongId,
+      p_mode: "random",
+      p_run_id: state.runId,
+      p_max_start_sec: maxStartSec
+    });
+
+    if (error || !data || !data[0]) {
+      console.error(error);
+      setStatus("status_error"); resetRun(); updateStartButton(); return;
+    }
+
+    state.attemptId = data[0].attempt_id;
+    beginFlashPlay(data[0].start_sec || 0);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+
   async function submitAnswer() {
     if (!state.playing) return;
     if (!state.attemptId) {
@@ -971,6 +1223,13 @@
     state.submitting = true;
     const normalized = getAnswerNormForSong(song);
 
+    if (state.scope === "flash") {
+      clearFlashCountdown();
+      await finishFlashSong(normalized);
+      state.submitting = false;
+      return;
+    }
+
     if (state.scope === "marathon") {
       await finishMarathon(normalized);
       state.submitting = false;
@@ -984,7 +1243,8 @@
   function renderLeaderboardRows(rows, container, scope) {
     container.innerHTML = "";
     const isMarathon = scope === "marathon";
-    const colCount = isMarathon ? 3 : 4;
+    const isFlash = scope === "flash";
+    const colCount = (isMarathon || isFlash) ? 3 : 4;
 
     if (!rows || rows.length === 0) {
       const emptyRow = document.createElement("tr");
@@ -999,19 +1259,29 @@
 
     rows.forEach((row) => {
       const tr = document.createElement("tr");
-      
-      let html = `
-        <td>${row.rank}</td>
-        <td>${row.display_name || "Anonymous"}</td>
-        <td>${formatTime(row.time_ms)}</td>
-      `;
 
-      if (!isMarathon) {
-        const song = state.songs.find((s) => s.id === row.song_id);
-        const songLabel = row.song_id
-          ? (state.language === "ja" ? song?.title_ja : song?.title_en)
-          : "-";
-        html += `<td>${songLabel || "-"}</td>`;
+      let html;
+      if (isFlash) {
+        // Flash: # | Player | 正解 | タイム
+        html = `
+          <td>${row.rank}</td>
+          <td>${row.display_name || "Anonymous"}</td>
+          <td>${row.correct_count ?? "-"}</td>
+          <td>${formatTime(row.time_ms)}</td>
+        `;
+      } else {
+        html = `
+          <td>${row.rank}</td>
+          <td>${row.display_name || "Anonymous"}</td>
+          <td>${formatTime(row.time_ms)}</td>
+        `;
+        if (!isMarathon) {
+          const song = state.songs.find((s) => s.id === row.song_id);
+          const songLabel = row.song_id
+            ? (state.language === "ja" ? song?.title_ja : song?.title_en)
+            : "-";
+          html += `<td>${songLabel || "-"}</td>`;
+        }
       }
 
       tr.innerHTML = html;
@@ -1023,7 +1293,7 @@
     if (!supabaseClient) return [];
     let query = supabaseClient
       .from("leaderboard")
-      .select("rank, display_name, time_ms, song_id, scope")
+      .select("rank, display_name, time_ms, song_id, scope, correct_count")
       .eq("scope", scope)
       .eq("mode", mode)
       .order("rank", { ascending: true });
@@ -1035,9 +1305,21 @@
   }
 
   // skipInsert=true: rows に既にプレイヤーのスコアが含まれているので挿入しない
-  function showResultLeaderboard(rows, playerTimeMs, savedName, skipInsert) {
+  function showResultLeaderboard(rows, playerData, savedName, skipInsert) {
+    const isFlash = state.result.scope === "flash";
     ui.resultLeaderboard.classList.remove("hidden");
     ui.leaderboardResult.innerHTML = "";
+
+    // Flash の場合ヘッダーを変更
+    if (ui.resultLeaderboardHead) {
+      ui.resultLeaderboardHead.innerHTML = isFlash
+        ? `<tr><th>#</th><th data-i18n="player">${i18n[state.language].player}</th><th>${i18n[state.language].flash_correct_col}</th><th data-i18n="time">${i18n[state.language].time}</th></tr>`
+        : `<tr><th>#</th><th data-i18n="player">${i18n[state.language].player}</th><th data-i18n="time">${i18n[state.language].time}</th></tr>`;
+    }
+
+    // playerData: flash = { correctCount, timeMs }、それ以外 = timeMs (number)
+    const playerTimeMs = isFlash ? playerData?.timeMs : playerData;
+    const playerCorrect = isFlash ? playerData?.correctCount : null;
 
     const youLabel = savedName || (state.language === "ja" ? "\u25b6 \u3042\u306a\u305f" : "\u25b6 You");
 
@@ -1045,23 +1327,35 @@
     let pIdx;
 
     if (skipInsert) {
-      // 保存済み: rows の中から自分の行を特定してハイライト
       merged = rows.map((r) => {
-        const isPlayer = r.time_ms === playerTimeMs &&
-          (r.display_name === savedName || (!savedName && r.display_name === "Anonymous"));
+        let isPlayer = false;
+        if (isFlash) {
+          isPlayer = r.correct_count === playerCorrect && r.time_ms === playerTimeMs &&
+            (r.display_name === savedName || (!savedName && r.display_name === "Anonymous"));
+        } else {
+          isPlayer = r.time_ms === playerTimeMs &&
+            (r.display_name === savedName || (!savedName && r.display_name === "Anonymous"));
+        }
         return { ...r, isPlayer };
       });
       pIdx = merged.findIndex((r) => r.isPlayer);
-      // 見つからない場合は time_ms だけで判定
       if (pIdx === -1) {
-        pIdx = merged.findIndex((r) => r.time_ms === playerTimeMs);
+        pIdx = isFlash
+          ? merged.findIndex((r) => r.correct_count === playerCorrect && r.time_ms === playerTimeMs)
+          : merged.findIndex((r) => r.time_ms === playerTimeMs);
         if (pIdx !== -1) merged[pIdx] = { ...merged[pIdx], isPlayer: true };
       }
     } else {
-      // 未保存: プレイヤー仮エントリを挿入
-      const playerEntry = { display_name: youLabel, time_ms: playerTimeMs, isPlayer: true };
+      const playerEntry = isFlash
+        ? { display_name: youLabel, time_ms: playerTimeMs, correct_count: playerCorrect, isPlayer: true }
+        : { display_name: youLabel, time_ms: playerTimeMs, isPlayer: true };
       merged = [...rows];
-      const insertIdx = merged.findIndex((r) => r.time_ms > playerTimeMs);
+      // Flash は correct_count DESC → time_ms ASC で挿入位置を探す
+      const insertIdx = isFlash
+        ? merged.findIndex((r) =>
+            r.correct_count < playerCorrect ||
+            (r.correct_count === playerCorrect && r.time_ms > playerTimeMs))
+        : merged.findIndex((r) => r.time_ms > playerTimeMs);
       if (insertIdx === -1) merged.push(playerEntry);
       else merged.splice(insertIdx, 0, playerEntry);
       pIdx = merged.findIndex((r) => r.isPlayer);
@@ -1078,18 +1372,27 @@
       if (row.isPlayer) tr.classList.add("result-my-row");
       const displayRank = start + i + 1;
       const name = row.isPlayer && !skipInsert ? youLabel : (row.display_name || "Anonymous");
-      tr.innerHTML = `
-        <td>${displayRank}</td>
-        <td>${name}</td>
-        <td>${formatTime(row.time_ms)}</td>
-      `;
+      if (isFlash) {
+        tr.innerHTML = `
+          <td>${displayRank}</td>
+          <td>${name}</td>
+          <td>${row.correct_count ?? "-"}</td>
+          <td>${formatTime(row.time_ms)}</td>
+        `;
+      } else {
+        tr.innerHTML = `
+          <td>${displayRank}</td>
+          <td>${name}</td>
+          <td>${formatTime(row.time_ms)}</td>
+        `;
+      }
       ui.leaderboardResult.appendChild(tr);
     });
 
     if (!merged.length) {
       const emptyRow = document.createElement("tr");
       const cell = document.createElement("td");
-      cell.colSpan = 3;
+      cell.colSpan = isFlash ? 4 : 3;
       cell.className = "empty";
       cell.textContent = i18n[state.language].ranking_empty;
       emptyRow.appendChild(cell);
@@ -1101,7 +1404,7 @@
     if (!supabaseClient) return;
     let query = supabaseClient
       .from("leaderboard")
-      .select("rank, display_name, time_ms, song_id, scope")
+      .select("rank, display_name, time_ms, song_id, scope, correct_count")
       .eq("scope", scope)
       .eq("mode", mode)
       .order("rank", { ascending: true });
@@ -1124,9 +1427,12 @@
 
   async function loadSetupLeaderboard() {
     if (!supabaseClient || !songsLoaded) return;
-    if (state.scope !== "marathon") return;
-    const mode = state.mode;
-    await loadLeaderboard("marathon", mode, null, ui.leaderboardSetup);
+    if (state.scope === "single") return;
+    if (state.scope === "marathon") {
+      await loadLeaderboard("marathon", state.mode, null, ui.leaderboardSetup);
+    } else if (state.scope === "flash") {
+      await loadLeaderboard("flash", "random", null, ui.leaderboardSetup);
+    }
   }
 
   async function loadRankingLeaderboard() {
@@ -1137,13 +1443,15 @@
     ui.rankingSongWrap.classList.toggle("hidden", scope !== "single");
 
     if (ui.rankingThSong) {
-      ui.rankingThSong.classList.toggle("hidden", scope === "marathon");
+      ui.rankingThSong.classList.toggle("hidden", scope !== "single");
     }
 
     if (scope === "single") {
       await loadLeaderboard(scope, mode, songId, ui.leaderboardRanking);
     } else {
-      await loadLeaderboard(scope, mode, null, ui.leaderboardRanking);
+      // Flash は mode が常に "random"
+      const effectiveMode = scope === "flash" ? "random" : mode;
+      await loadLeaderboard(scope, effectiveMode, null, ui.leaderboardRanking);
     }
   }
 
@@ -1153,7 +1461,7 @@
     setQuizActive(false);
     showView("result");
 
-    if (!success || !timeMs) {
+    if (!success || timeMs == null) {
       ui.resultTime.textContent = "-";
       ui.resultMessage.textContent = i18n[state.language].status_failed;
       ui.saveBlock.classList.add("hidden");
@@ -1162,7 +1470,17 @@
       return;
     }
 
-    ui.resultTime.textContent = formatTime(timeMs);
+    const isFlash = state.result.scope === "flash";
+    const correctCount = state.result.correctCount ?? 0;
+    const totalSongs = state.result.totalSongs ?? state.runTotal;
+
+    // Flash: 正解数を大きく表示、タイムを副表示
+    if (isFlash) {
+      ui.resultTime.textContent = `${correctCount} / ${totalSongs}`;
+      ui.resultMessage.textContent = `${i18n[state.language].flash_result_time}: ${formatTime(timeMs)}s`;
+    } else {
+      ui.resultTime.textContent = formatTime(timeMs);
+    }
 
     // ランキングデータを取得して予測順位を計算
     let rows = [];
@@ -1173,14 +1491,25 @@
         state.result.mode,
         state.result.scope === "single" ? state.result.songId : null
       );
-      const betterCount = rows.filter((r) => r.time_ms < timeMs).length;
-      projectedRank = betterCount + 1;
+      if (isFlash) {
+        // Flash: correct_count DESC → time_ms ASC
+        const betterCount = rows.filter((r) =>
+          r.correct_count > correctCount ||
+          (r.correct_count === correctCount && r.time_ms < timeMs)
+        ).length;
+        projectedRank = betterCount + 1;
+      } else {
+        const betterCount = rows.filter((r) => r.time_ms < timeMs).length;
+        projectedRank = betterCount + 1;
+      }
       state.result.rank = projectedRank;
     }
 
     if (state.result.pendingScoreId) {
       // ── Top 30 ランクイン！おめでとう画面を表示 ──
-      ui.resultMessage.textContent = "";
+      ui.resultMessage.textContent = isFlash
+        ? `${i18n[state.language].flash_result_time}: ${formatTime(timeMs)}s`
+        : "";
       ui.congratsBlock.classList.remove("hidden");
 
       // 順位表示
@@ -1192,7 +1521,7 @@
         ui.congratsSubtitle.textContent = i18n[state.language].congrats_subtitle;
       }
 
-      // サマリー（モード・スコープ・曲名）
+      // サマリー
       const songTitle = state.result.songId
         ? (state.language === "ja"
             ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
@@ -1201,25 +1530,29 @@
       const modeLabel = state.result.mode === "intro"
         ? i18n[state.language].mode_intro
         : i18n[state.language].mode_random;
-      const scopeLabel = state.result.scope === "single"
-        ? i18n[state.language].scope_single
-        : i18n[state.language].scope_marathon;
+      const scopeLabel = isFlash
+        ? i18n[state.language].scope_flash
+        : state.result.scope === "single"
+          ? i18n[state.language].scope_single
+          : i18n[state.language].scope_marathon;
       ui.congratsSummary.textContent = [modeLabel, scopeLabel, songTitle].filter(Boolean).join(" · ");
 
-      // バッジを予測順位で先描画（ポップアップで表示）
-      drawBadge(projectedRank, timeMs, songTitle, state.result.mode, state.result.scope);
+      // バッジを予測順位で先描画
+      drawBadge(projectedRank, isFlash ? correctCount : timeMs, songTitle, state.result.mode, state.result.scope);
 
       // 保存ブロックを表示
       ui.saveBlock.classList.remove("hidden");
 
       // 予測順位込みのランキングテーブルを表示
-      showResultLeaderboard(rows, timeMs, null, false);
+      const playerData = isFlash ? { correctCount, timeMs } : timeMs;
+      showResultLeaderboard(rows, playerData, null, false);
     } else {
       // Top30外
-      ui.resultMessage.textContent = i18n[state.language].status_not_qualified;
+      ui.resultMessage.textContent = isFlash
+        ? `${i18n[state.language].flash_result_time}: ${formatTime(timeMs)}s  ${i18n[state.language].status_not_qualified}`
+        : i18n[state.language].status_not_qualified;
       ui.congratsBlock.classList.add("hidden");
       ui.saveBlock.classList.add("hidden");
-      // ランキングテーブルだけ表示（自分のエントリなし）
       if (rows.length > 0) {
         showResultLeaderboard(rows, null, null, true);
       }
@@ -1386,7 +1719,8 @@
           ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
           : state.songs.find((s) => s.id === state.result.songId)?.title_en)
       : null;
-    drawBadge(rank, state.result.timeMs, songTitle, state.result.mode, state.result.scope);
+    const isFlash = state.result.scope === "flash";
+    drawBadge(rank, isFlash ? (state.result.correctCount ?? 0) : state.result.timeMs, songTitle, state.result.mode, state.result.scope);
 
     // 保存後の名前でランキングテーブルを更新
     const savedName = name || "Anonymous";
@@ -1395,7 +1729,10 @@
       state.result.mode,
       state.result.scope === "single" ? state.result.songId : null
     );
-    showResultLeaderboard(rows, state.result.timeMs, savedName, true);
+    const playerData = isFlash
+      ? { correctCount: state.result.correctCount ?? 0, timeMs: state.result.timeMs }
+      : state.result.timeMs;
+    showResultLeaderboard(rows, playerData, savedName, true);
 
     ui.resultMessage.textContent = i18n[state.language].status_saved;
 
@@ -1544,7 +1881,12 @@
 
     ui.nextBtn.addEventListener("click", () => {
       ui.nextArea.classList.add("hidden");
-      startMarathonSong();
+      ui.quizAnswer.style.display = "";
+      if (state.scope === "flash") {
+        startFlashSong();
+      } else {
+        startMarathonSong();
+      }
     });
 
     ui.cancelBtn.addEventListener("click", async () => {
@@ -1592,14 +1934,14 @@
       if (e.key === "Escape") {
         ui.howToPlayOverlay.classList.remove("is-open");
       }
-      // マラソン: 右矢印キーで次の曲へ
+      // マラソン/Flash: 右矢印キーで次の曲へ
       if (e.key === "ArrowRight" && !ui.nextArea.classList.contains("hidden")) {
         e.preventDefault();
         ui.nextBtn.click();
       }
     });
 
-    // 結果画面の名前入力欄で Enter を押しても保存できるようにする
+    // 結果画面: Enter キーで保存
     ui.resultName.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.isComposing) {
         e.preventDefault();
