@@ -1,6 +1,7 @@
 # YOASOBI Intro RTA (GitHub Pages)
 
-このREAME.mdでは、YOASOBI Intro Quiz（本サイト）の技術的な内容をまとめています。また、本サイトに用いられているソースコードは`Main Branch`から確認できます。随時更新していく予定。
+このREAME.mdでは、YOASOBI Intro Quiz（本サイト）の技術的な内容をまとめています。また、本サイトに用いられているソースコードは`Main Branch`から確認できます。
+随時更新していく予定。
 
 ## Technical Things
 
@@ -17,4 +18,4 @@
 
 ### 回答時間の集計
 
-- Youtube iframe API の onStateChange()を取得している。Unstartedが帰る場合広告だと判断できるため、広告時間分のカウントアップを避けることができる。
+- Youtube iframe API の onStateChange()を取得している。Unstartedが返る場合広告だと判断できるため、広告時間分のカウントアップを避けることができる。

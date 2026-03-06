@@ -322,8 +322,13 @@ begin
     return;
   end if;
 
-  -- スコア保存用タイムをクランプ（念のため上限保護）
-  v_clamped_ms := greatest(1, least(p_time_ms, 10000));
+  -- スコア保存用タイムをクランプ
+  -- シングルは 1〜10000ms、マラソンは下限 1ms のみ（上限なし）
+  -- ※ シングルは既に上の if で 10000ms 超を reject 済みなので実質 greatest(1, p_time_ms)
+  v_clamped_ms := case
+    when v_attempt.scope = 'single' then greatest(1, least(p_time_ms, 10000))
+    else greatest(1, p_time_ms)
+  end;
 
   -- 回答検証
   select (p_answer_norm = any(s.answers_normalized))
@@ -418,3 +423,6 @@ $$;
 
 -- 権限付与（新シグネチャ）
 grant execute on function public.finish_attempt(uuid, text, integer) to anon, authenticated;
+
+grant execute on function public.finish_attempt(uuid, text, integer) to anon, authenticated;
+grant execute on function public.submit_score(uuid, text)             to anon, authenticated;

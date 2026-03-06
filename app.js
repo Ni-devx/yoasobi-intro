@@ -673,11 +673,15 @@
     }
     if (!await ensurePlayerReady()) {
       setStatus("status_error");
+      setQuizActive(false);
+      showView("setup");
       updateStartButton();
       return;
     }
     if (!player) {
       setStatus("status_error");
+      setQuizActive(false);
+      showView("setup");
       updateStartButton();
       return;
     }
@@ -689,6 +693,8 @@
     const validSongs = state.songs.filter((s) => s.video_id);
     if (!validSongs.length) {
       setStatus("status_error");
+      setQuizActive(false);
+      showView("setup");
       updateStartButton();
       return;
     }
@@ -718,6 +724,10 @@
     if (error || !data || !data[0]) {
       console.error(error);
       setStatus("status_error");
+      // start_attempt 失敗時: quiz UI を表示したままにせず setup 画面へ戻す
+      // （state.playing = false のまま UI だけ表示される "submit できない" 状態を防ぐ）
+      setQuizActive(false);
+      showView("setup");
       updateStartButton();
       return;
     }
@@ -733,11 +743,15 @@
     }
     if (!await ensurePlayerReady()) {
       setStatus("status_error");
+      setQuizActive(false);
+      showView("setup");
       updateStartButton();
       return;
     }
     if (!player) {
       setStatus("status_error");
+      setQuizActive(false);
+      showView("setup");
       updateStartButton();
       return;
     }
@@ -752,6 +766,8 @@
     if (error || !data || !data[0]) {
       console.error(error);
       setStatus("status_error");
+      setQuizActive(false);
+      showView("setup");
       updateStartButton();
       return;
     }
@@ -897,8 +913,7 @@
       stopPlay();
       updateNowPlaying(true);
 
-      // 曲ごとのタイムを記録
-      state.songTimes.push(clientTimeMs);
+      // 曲ごとのタイムを表示（clientTimeMs はあくまで画面表示用）
       const pos = state.runPosition; // まだ更新前の現在曲番号
       ui.songTimeDisplay.textContent = `#${pos}  ${formatTime(clientTimeMs)}`;
 
@@ -919,9 +934,9 @@
       stopPlay();
       updateNowPlaying(true);
 
-      // 最後の曲のタイムを記録してクライアント側で合計を計算
-      state.songTimes.push(clientTimeMs);
-      const totalMs = state.songTimes.reduce((sum, t) => sum + t, 0);
+      // DBが返す合計タイムを権威ある値として使用する
+      // （クライアント側で再計算すると v_clamped_ms との差異が生じるため）
+      const totalMs = result.total_ms;
 
       state.result.pendingScoreId = result.score_id;
       state.result.timeMs = totalMs;
@@ -1576,6 +1591,19 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         ui.howToPlayOverlay.classList.remove("is-open");
+      }
+      // マラソン: 右矢印キーで次の曲へ
+      if (e.key === "ArrowRight" && !ui.nextArea.classList.contains("hidden")) {
+        e.preventDefault();
+        ui.nextBtn.click();
+      }
+    });
+
+    // 結果画面の名前入力欄で Enter を押しても保存できるようにする
+    ui.resultName.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.isComposing) {
+        e.preventDefault();
+        if (!ui.saveScore.disabled) ui.saveScore.click();
       }
     });
 
