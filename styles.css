@@ -899,15 +899,6 @@ button.ghost--sm {
   text-align: center;
 }
 
-.ad-reload-area {
-  display: flex;
-  justify-content: center;
-  padding: 8px 0 0;
-}
-
-.ad-reload-area .ghost--sm { font-size: 0.75rem; opacity: 0.45; transition: opacity 0.2s; }
-.ad-reload-area .ghost--sm:hover { opacity: 1; }
-
 /* ─────────────────────────────────────
    Flash Mode — カウントダウン
 ───────────────────────────────────── */
@@ -1478,18 +1469,6 @@ body.not-home .next-area button:hover {
 body.not-home .song-time-display {
   color: var(--accent);
   text-shadow: 0 0 20px var(--accent-glow);
-}
-
-/* ad reload */
-body.not-home .ad-reload-area .ghost--sm {
-  color: var(--muted-light);
-  border-color: transparent;
-}
-body.not-home .ad-reload-area .ghost--sm:hover {
-  color: var(--muted);
-  border-color: var(--border);
-  background: transparent;
-  box-shadow: none;
 }
 
 body.view-setup {

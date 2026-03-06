@@ -1,6 +1,8 @@
 (() => {
   const config = window.APP_CONFIG || {};
   const hasConfig = Boolean(config.SUPABASE_URL && config.SUPABASE_ANON_KEY);
+  const FLASH_CLIP_SECONDS = 1.5;
+  const FLASH_CLIP_POLL_MS = 100;
 
   const i18n = {
     ja: {
@@ -60,7 +62,6 @@
       download_badge: "画像を保存",
       next_song: "次の曲へ →",
       cancel_game: "キャンセル",
-      reload_video: "↺ 動画を再ロード（広告中） [R]",
       how_to_play: "遊び方",
       popup_title: "遊び方",
       popup_about_title: "About",
@@ -73,7 +74,6 @@
       popup_scope_marathon: "全曲: ランダムな順で全曲再生",
       popup_tips_title: "ヒント",
       popup_tip_1: "曲名を入力して候補から選択。",
-      popup_tip_2: "広告が流れている場合は [R] キーで再ロード。",
       popup_tip_3: "広告が流れている場合、タイマーは自動で停止します。",
       footer_repo: "View source on GitHub",
       hidden: "非表示",
@@ -146,7 +146,6 @@
       download_badge: "Save image",
       next_song: "Next Song →",
       cancel_game: "Cancel",
-      reload_video: "↺ Reload video (if an ad is playing) [R]",
       how_to_play: "How to Play",
       popup_title: "How to Play",
       popup_about_title: "About",
@@ -159,7 +158,6 @@
       popup_scope_marathon: "Marathon: All songs in a random order.",
       popup_tips_title: "Tips",
       popup_tip_1: "Type a song name and select from the suggestions.",
-      popup_tip_2: "If an ad is playing, press [R] to reload the video.",
       popup_tip_3: "If an ad is playing, the timer pauses automatically.",
       footer_repo: "View source on GitHub",
       hidden: "Hidden",
@@ -214,7 +212,9 @@
     flashSongStartTime: null, // 曲開始のwall-clock（カウントダウン基準）
     flashCountdown: 10,       // 残り秒数表示用
     flashCountdownTimer: null, // setInterval ハンドル
-    flashWaitingForPlay: false // Flash: 実際にPLAYING状態になるのを待っているフラグ
+    flashWaitingForPlay: false, // Flash: 実際にPLAYING状態になるのを待っているフラグ
+    flashClipStartSec: null,    // Flash: 1.5sクリップの開始時刻(動画内秒)
+    flashClipTimer: null        // Flash: 1.5s再生の監視タイマー
   };
 
   const ui = {
@@ -270,7 +270,6 @@
     nextBtn: document.getElementById("next-btn"),
     cancelBtn: document.getElementById("cancel-btn"),
     songTimeDisplay: document.getElementById("song-time-display"),
-    reloadVideoBtn: document.getElementById("reload-video-btn"),
     howToPlayBtn: document.getElementById("how-to-play-btn"),
     howToPlayOverlay: document.getElementById("how-to-play-overlay"),
     howToPlayClose: document.getElementById("how-to-play-close"),
@@ -300,8 +299,6 @@
   let cueResolver = null;
   let mediaSessionInterval = null;
   let adWatchdog = null;
-
-
 
   function normalizeAnswer(text) {
     return (text || "")
@@ -451,6 +448,7 @@
     state.playing = false;
     state.submitting = false;
     state.flashWaitingForPlay = false;
+    clearFlashClipMonitor();
     // MediaSession 上書きインターバルを停止
     if (mediaSessionInterval) {
       clearInterval(mediaSessionInterval);
@@ -667,6 +665,18 @@
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     return 0;
+  }
+
+  async function reloadVideo() {
+    if (!state.currentSong || !player) return;
+    stopPlay();
+    ui.videoWrapper.classList.add("is-obscured");
+    await cueVideo(state.currentSong.video_id);
+    if (state.scope === "flash") {
+      beginFlashPlay(state.startSec);
+    } else {
+      beginPlay(state.startSec);
+    }
   }
 
   function beginPlay(startSec) {
@@ -987,6 +997,47 @@
     if (ui.flashCountdownWrap) ui.flashCountdownWrap.classList.add("hidden");
   }
 
+  function clearFlashClipMonitor() {
+    if (state.flashClipTimer) {
+      clearInterval(state.flashClipTimer);
+      state.flashClipTimer = null;
+    }
+    state.flashClipStartSec = null;
+  }
+
+  function startFlashClipMonitor() {
+    if (!player) return;
+    clearFlashClipMonitor();
+
+    state.flashClipTimer = setInterval(() => {
+      if (!state.playing || state.scope !== "flash") {
+        clearFlashClipMonitor();
+        return;
+      }
+      if (!player) return;
+      if (player.getPlayerState() !== YT.PlayerState.PLAYING) return;
+
+      const currentSec = player.getCurrentTime();
+      if (!Number.isFinite(currentSec)) return;
+
+      if (state.flashClipStartSec === null) {
+        state.flashClipStartSec = currentSec;
+        if (!state.flashSongStartTime) {
+          state.flashSongStartTime = Date.now();
+        }
+        return;
+      }
+
+      if (currentSec - state.flashClipStartSec >= FLASH_CLIP_SECONDS) {
+        clearFlashClipMonitor();
+        if (!state.playing) return;
+        player.pauseVideo();
+        startFlashCountdown();
+        setTimeout(() => ui.answerInput.focus(), 50);
+      }
+    }, FLASH_CLIP_POLL_MS);
+  }
+
   function startFlashCountdown() {
     state.flashCountdown = 10;
     if (ui.flashCountdownWrap) ui.flashCountdownWrap.classList.remove("hidden");
@@ -1017,14 +1068,15 @@
     state.submitting = false;
   }
 
-  // Flash: 0.5秒だけ再生してポーズ → カウントダウン開始
+  // Flash: 1.5秒だけ再生してポーズ → カウントダウン開始
   function beginFlashPlay(startSec) {
     state.playing = true;
     state.startSec = startSec;
     state.lastPlayStart = null;
     state.selectedSong = null;
-    state.flashSongStartTime = Date.now();
+    state.flashSongStartTime = null;
     clearFlashCountdown();
+    clearFlashClipMonitor();
 
     ui.videoWrapper.classList.add("is-obscured");
     setStatus("status_playing");
@@ -1044,8 +1096,8 @@
       player.seekTo(startSec, true);
       player.playVideo();
 
-      // onStateChange で実際に PLAYING になった瞬間から 1.5s 後に pause する
-      // （バッファリング完了前に pauseVideo() を呼ぶと無視されるバグを回避）
+      // onStateChange で実際に PLAYING になった後、
+      // CurrentTime の進行が 1.5s 分確認できたら pause する
       state.flashWaitingForPlay = true;
     }
   }
@@ -1897,18 +1949,6 @@
       showView("home");
     });
 
-    // 広告が流れているときに動画を再ロードするボタン
-    // IFrame API には広告スキップメソッドがないため、動画を再キューして再試行する
-    // [FIX] accumulatedMs はdelta積算方式のため広告中はすでに加算されていない。
-    //       Reload時も特別な処理は不要で、そのまま引き継がれる。
-    ui.reloadVideoBtn.addEventListener("click", async () => {
-      if (!state.currentSong || !player) return;
-      stopPlay();
-      ui.videoWrapper.classList.add("is-obscured");
-      await cueVideo(state.currentSong.video_id);
-      beginPlay(state.startSec);
-    });
-
     ui.langToggle.addEventListener("click", () => {
       state.language = state.language === "ja" ? "en" : "ja";
       applyTranslations();
@@ -2025,7 +2065,7 @@
               // 念のためステータスを再確認
               if (state.playing && player && player.getPlayerState() === -1) {
                 console.log("広告を検知、自動リロードします");
-                ui.reloadVideoBtn.click();
+                reloadVideo();
               }
             }, 2500); 
           }
@@ -2037,15 +2077,10 @@
               state.lastPlayStart = Date.now();
             }
 
-            // Flash: 動画が実際に PLAYING になったら 1.5s 後に pause
+            // Flash: 動画が実際に PLAYING になったら 1.5s 分の再生進行を監視
             if (state.scope === "flash" && state.flashWaitingForPlay) {
               state.flashWaitingForPlay = false;
-              setTimeout(() => {
-                if (!state.playing) return;
-                player.pauseVideo();
-                startFlashCountdown();
-                setTimeout(() => ui.answerInput.focus(), 50);
-              }, 1500);
+              startFlashClipMonitor();
             }
 
             // Flash: カウントダウン中に動画が再開されてしまった場合は強制 pause
