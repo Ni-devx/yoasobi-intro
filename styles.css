@@ -24,6 +24,21 @@
   --font-mono:    "DM Mono", monospace;
   --radius:       14px;
   --radius-sm:    8px;
+  --space-1:      4px;
+  --space-2:      8px;
+  --space-3:      12px;
+  --space-4:      16px;
+  --space-5:      20px;
+  --space-6:      24px;
+  --space-7:      32px;
+  --space-8:      40px;
+  --space-9:      48px;
+  --space-10:     64px;
+  --text-xs:      11px;
+  --text-sm:      12px;
+  --text-md:      14px;
+  --text-lg:      16px;
+  --text-xl:      18px;
   --space-page-x: 8vw;
   --space-page-x-sm: 5vw;
   --bg-gradient: radial-gradient(1100px circle at 12% 8%, rgba(198, 52, 98, 0.38), transparent 62%),
@@ -41,7 +56,7 @@
 ───────────────────────────────────────── */
 body {
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: var(--text-md);
   background-color: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -61,7 +76,7 @@ body.not-home .home-only { display: none !important; }
 ───────────────────────────────────────── */
 .site-header {
   flex-direction: column;
-  padding: 52px var(--space-page-x) 0;
+  padding: var(--space-10) var(--space-page-x) 0;
   gap: 0;
 }
 
@@ -69,16 +84,16 @@ body.not-home .home-only { display: none !important; }
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  gap: var(--space-4);
   width: 100%;
 }
 
 .eyebrow {
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
   opacity: 0.75;
 }
 
@@ -97,9 +112,9 @@ body.not-home .home-only { display: none !important; }
 }
 
 .subhead {
-  margin-top: 16px;
+  margin-top: var(--space-4);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   letter-spacing: 0.02em;
 }
 
@@ -113,10 +128,10 @@ body.not-home .home-only { display: none !important; }
 ───────────────────────────────────────── */
 main {
   flex: 1;
-  padding: 0 var(--space-page-x) 40px;
+  padding: 0 var(--space-page-x) var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .view { display: none; }
@@ -127,25 +142,25 @@ main {
    Home panel
 ───────────────────────────────────────── */
 .home-panel {
-  padding: 48px 0 40px;
+  padding: var(--space-9) 0 var(--space-8);
 }
 
 .home-panel__actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: stretch;
   max-width: 280px;
 }
 
 .home-panel__actions .ghost {
   text-align: center;
-  padding: 14px 20px;
-  font-size: 14px;
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--text-md);
 }
 
 .home-panel__hint {
-  margin-top: 20px;
+  margin-top: var(--space-5);
 }
 
 .text-link {
@@ -153,7 +168,7 @@ main {
   border: none;
   color: var(--muted);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--text-sm);
   letter-spacing: 0.04em;
   cursor: pointer;
   padding: 0;
@@ -169,8 +184,8 @@ main {
 .page-nav {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 24px 0 20px;
+  gap: var(--space-3);
+  padding: var(--space-6) 0 var(--space-5);
 }
 
 .page-nav__title {
@@ -190,7 +205,7 @@ main {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 24px;
+  padding: var(--space-6);
   box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
 }
 
@@ -200,12 +215,12 @@ main {
 button { cursor: pointer; font-family: inherit; }
 
 button.ghost {
-  padding: 9px 16px;
+  padding: var(--space-3) var(--space-4);
   border-radius: 999px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 button.ghost:hover {
@@ -215,8 +230,8 @@ button.ghost:hover {
 }
 
 button.ghost--sm {
-  padding: 7px 13px;
-  font-size: 12px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
 }
 
 /* ─────────────────────────────────────────
@@ -232,13 +247,13 @@ button.ghost--sm {
 
 .segmented button {
   flex: 1;
-  padding: 10px 12px;
+  padding: var(--space-3) var(--space-3);
   border: none;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   transition: background 0.15s, color 0.15s;
 }
 
@@ -253,10 +268,10 @@ button.ghost--sm {
 ───────────────────────────────────────── */
 .progress-wrap {
   display: none;
-  gap: 6px;
+  gap: var(--space-2);
   align-items: center;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 .player-panel.marathon-mode .progress-wrap {
@@ -266,7 +281,7 @@ button.ghost--sm {
 .progress-wrap .label {
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 /* ─────────────────────────────────────────
@@ -284,7 +299,7 @@ button.ghost--sm {
 .setup-left {
   width: 300px;
   flex-shrink: 0;
-  padding: 32px 28px;
+  padding: var(--space-7) var(--space-6);
   position: relative;
   z-index: 1;
 }
@@ -292,19 +307,19 @@ button.ghost--sm {
 .setup-left .controls {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: var(--space-5);
   margin-bottom: 0;
 }
 
 .start-btn-full {
   width: 100%;
   text-align: center;
-  padding: 11px 16px;
+  padding: var(--space-3) var(--space-4);
 }
 
 .setup-panel > .ranking-table {
   flex: 1;
-  padding: 28px 24px;
+  padding: var(--space-6);
   position: relative;
   z-index: 1;
   overflow-x: auto;
@@ -315,17 +330,17 @@ button.ghost--sm {
 .controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
 }
 
 .control label {
   display: block;
-  font-size: 10px;
+  font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--muted);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .control input,
@@ -334,13 +349,13 @@ button.ghost--sm {
 .answer-area select,
 .ranking-controls select {
   width: 100%;
-  padding: 10px 12px;
+  padding: var(--space-3) var(--space-3);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--panel-strong);
   color: var(--text);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 /* ─────────────────────────────────────────
@@ -374,7 +389,7 @@ button.ghost--sm {
 
 /* quiz / result content switching */
 .quiz-content,
-.result-content { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.result-content { display: flex; flex-direction: column; gap: var(--space-4); width: 100%; }
 .quiz-content.hidden,
 .result-content.hidden { display: none; }
 
@@ -388,16 +403,16 @@ button.ghost--sm {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  min-height: 32px;
-  gap: 8px;
+  margin-bottom: var(--space-4);
+  min-height: var(--space-7);
+  gap: var(--space-2);
 }
 
 .video-area {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .video-wrapper {
@@ -456,7 +471,7 @@ button.ghost--sm {
 
 .video-meta .divider { color: var(--border); }
 
-.timer-area { margin-top: 20px; text-align: center; }
+.timer-area { margin-top: var(--space-5); text-align: center; }
 
 .timer {
   font-family: var(--font-mono);
@@ -474,7 +489,7 @@ button.ghost--sm {
   letter-spacing: 0.04em;
 }
 
-.answer-area { margin-top: 18px; }
+.answer-area { margin-top: var(--space-5); }
 
 .search-wrap { position: relative; }
 
@@ -516,13 +531,13 @@ button.ghost--sm {
 .search-list.hidden { display: none; }
 
 .search-list li {
-  padding: 10px 16px;
+  padding: var(--space-3) var(--space-4);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  margin: 2px 4px;
+  margin: 2px var(--space-1);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2);
   transition: background 0.1s;
   line-height: 1.3;
 }
@@ -530,8 +545,8 @@ button.ghost--sm {
 .search-list li:hover,
 .search-list li.active { background: var(--accent-dim); color: var(--accent); }
 
-.search-list li .song-ja { font-weight: 600; font-size: 14px; }
-.search-list li .song-en { font-size: 11px; color: var(--muted); }
+.search-list li .song-ja { font-weight: 600; font-size: var(--text-md); }
+.search-list li .song-en { font-size: var(--text-xs); color: var(--muted); }
 .search-list li .song-en.is-match { color: var(--text); font-weight: 500; }
 
 .search-list li mark {
@@ -611,12 +626,12 @@ button.ghost--sm {
 
 .result-body {
   text-align: center;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
 }
 
 .result-correct {
-  margin-top: 6px;
-  font-size: 14px;
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -995,13 +1010,13 @@ button.ghost--sm {
 
   /* ── ページ全体 ── */
   main {
-    padding: 0 var(--space-page-x-sm) 32px;
-    gap: 16px;
+    padding: 0 var(--space-page-x-sm) var(--space-7);
+    gap: var(--space-4);
   }
 
   /* ── ヘッダー ── */
   .site-header {
-    padding: 36px var(--space-page-x-sm) 0;
+    padding: var(--space-8) var(--space-page-x-sm) 0;
   }
 
   .site-header h1 {
@@ -1009,14 +1024,14 @@ button.ghost--sm {
   }
 
   .subhead {
-    margin-top: 10px;
-    font-size: 12px;
+    margin-top: var(--space-2);
+    font-size: var(--text-sm);
   }
 
   /* ── フッター ── */
   .site-footer {
-    padding: 24px var(--space-page-x-sm) 32px;
-    font-size: 10px;
+    padding: var(--space-6) var(--space-page-x-sm) var(--space-7);
+    font-size: var(--text-xs);
   }
 
   /* ── Flash カウントダウン ── */
@@ -1028,7 +1043,7 @@ button.ghost--sm {
 
   /* ── ホームパネル ── */
   .home-panel {
-    padding: 32px 0 28px;
+    padding: var(--space-7) 0 var(--space-6);
   }
 
   .home-panel__actions {
@@ -1036,14 +1051,14 @@ button.ghost--sm {
   }
 
   .home-panel__actions .ghost {
-    font-size: 14px;
-    padding: 14px 16px;
+    font-size: var(--text-md);
+    padding: var(--space-4) var(--space-4);
   }
 
   /* ── ページナビ ── */
   .page-nav {
-    padding: 20px 0 16px;
-    gap: 8px;
+    padding: var(--space-5) 0 var(--space-4);
+    gap: var(--space-2);
   }
 
   .page-nav__title {
@@ -1052,14 +1067,14 @@ button.ghost--sm {
 
   /* ── パネル共通 ── */
   .panel {
-    padding: 18px 16px;
+    padding: var(--space-5) var(--space-4);
     border-radius: var(--radius-sm);
   }
 
   /* ── セットアップ ── */
   .setup-left {
     width: 100%;
-    padding: 24px 20px;
+    padding: var(--space-6) var(--space-5);
   }
 
   .setup-panel {
@@ -1077,13 +1092,13 @@ button.ghost--sm {
     border-left: none;
     border-right: none;
     border-radius: 0;
-    padding: 16px var(--space-page-x-sm) 20px;
+    padding: var(--space-4) var(--space-page-x-sm) var(--space-5);
   }
 
   /* 2カラム → 1カラム積み */
   .play-layout {
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .play-layout__left {
@@ -1094,8 +1109,8 @@ button.ghost--sm {
 
   .sub-nav {
     flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 12px;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
   }
 
   /* ── 動画：アスペクト比維持 ── */
@@ -1113,22 +1128,22 @@ button.ghost--sm {
 
   .ranking-left {
     width: 100%;
-    padding: 20px 18px 16px;
+    padding: var(--space-5) var(--space-4) var(--space-4);
     border-bottom: 1px solid rgba(255,255,255,0.07);
   }
 
-  .ranking-right { padding: 16px 16px; }
+  .ranking-right { padding: var(--space-4); }
 
   .ranking-controls {
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .ranking-control { flex: 1 1 140px; }
 
   /* ── タイマー ── */
-  .timer-area { margin-top: 14px; }
+  .timer-area { margin-top: var(--space-4); }
 
   .timer {
     font-size: clamp(40px, 14vw, 64px);
@@ -1137,10 +1152,10 @@ button.ghost--sm {
   .status { font-size: 12px; }
 
   /* ── 回答入力：iOS ズーム防止（font-size: 16px 以上） ── */
-  .answer-area { margin-top: 14px; }
+  .answer-area { margin-top: var(--space-4); }
 
   .search-wrap input {
-    padding: 13px 16px;
+    padding: var(--space-3) var(--space-4);
     font-size: 16px;
     border-radius: var(--radius-sm);
   }
@@ -1150,9 +1165,9 @@ button.ghost--sm {
     border-radius: var(--radius-sm);
   }
 
-  .search-list li { padding: 11px 14px; }
+  .search-list li { padding: var(--space-3) var(--space-4); }
 
-  .next-area { margin-top: 10px; }
+  .next-area { margin-top: var(--space-3); }
 
   .song-time-display { font-size: 1.2rem; }
 
@@ -1166,8 +1181,8 @@ button.ghost--sm {
 
   .ranking-table th,
   .ranking-table td {
-    padding: 9px 8px;
-    font-size: 12px;
+    padding: var(--space-2) var(--space-2);
+    font-size: var(--text-sm);
   }
 
   /* ── 結果 ── */
@@ -1192,21 +1207,21 @@ button.ghost--sm {
 
   .result-leaderboard th,
   .result-leaderboard td {
-    padding: 8px 8px;
-    font-size: 12px;
+    padding: var(--space-2) var(--space-2);
+    font-size: var(--text-sm);
   }
 
   /* ── バッジシェアボタン ── */
   .badge-actions {
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .badge-actions .ghost { text-align: center; }
 
   /* ── ポップアップ：既に常にボトムシート ── */
   .popup {
-    padding: 28px 20px 40px;
+    padding: var(--space-6) var(--space-5) var(--space-8);
   }
 
   .popup__title {
@@ -1225,8 +1240,8 @@ button.ghost--sm {
   .site-header h1 { font-size: 32px; }
 
   .home-panel__actions .ghost {
-    font-size: 13px;
-    padding: 11px 14px;
+    font-size: var(--text-sm);
+    padding: var(--space-3) var(--space-4);
   }
 
   .timer { font-size: 36px; }
@@ -1567,11 +1582,11 @@ body.not-home .setup-panel > .ranking-table { position: relative; z-index: 1; }
 
 .ranking-control label {
   display: block;
-  font-size: 10px;
+  font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 
 .ranking-right {
@@ -2045,7 +2060,7 @@ body.not-home .popup__badge {
 .badge-popup-actions {
   display: flex;
   justify-content: center;
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 /* ─────────────────────────────────────
@@ -2066,7 +2081,7 @@ body.not-home .popup__badge {
 ───────────────────────────────────── */
 @media (max-width: 768px) {
   body.not-home .congrats-block {
-    padding: 22px 18px 20px;
+    padding: var(--space-5) var(--space-4);
   }
 
   .congrats-rank-display {
@@ -2080,12 +2095,12 @@ body.not-home .popup__badge {
   body.not-home #save-score {
     width: 100%;
     text-align: center;
-    padding: 12px;
+    padding: var(--space-3);
   }
 
   .badge-actions {
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   body.not-home .badge-actions .ghost {
@@ -2103,6 +2118,6 @@ body.not-home .popup__badge {
     font-size: 32px;
   }
   body.not-home .congrats-block {
-    padding: 18px 14px;
+    padding: var(--space-4) var(--space-3);
   }
 }
