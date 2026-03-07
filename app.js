@@ -113,6 +113,7 @@
     searchWrap: document.getElementById("search-wrap"),
     resultTime: document.getElementById("result-time"),
     resultMessage: document.getElementById("result-message"),
+    resultCorrect: document.getElementById("result-correct"),
     saveBlock: document.getElementById("save-block"),
     resultName: document.getElementById("result-name"),
     saveScore: document.getElementById("save-score"),
@@ -121,6 +122,7 @@
     scopeToggle: document.getElementById("scope-toggle"),
     rankingMode: document.getElementById("ranking-mode"),
     rankingScope: document.getElementById("ranking-scope"),
+    rankingType: document.getElementById("ranking-type"),
     rankingSong: document.getElementById("ranking-song"),
     leaderboardSetup: document.getElementById("leaderboard-body-setup"),
     leaderboardRanking: document.getElementById("leaderboard-body-ranking"),
@@ -342,6 +344,22 @@
     }
   }
 
+  function setRankingType(type) {
+    if (ui.rankingType) {
+      ui.rankingType.querySelectorAll("button").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.type === type);
+      });
+    }
+
+    const isFlash = type === "flash";
+    const modeControl = ui.rankingMode?.closest(".ranking-control");
+    const scopeControl = ui.rankingScope?.closest(".ranking-control");
+    if (modeControl) modeControl.classList.toggle("hidden", isFlash);
+    if (scopeControl) scopeControl.classList.toggle("hidden", isFlash);
+
+    loadRankingLeaderboard();
+  }
+
   function resetRun() {
     state.runId = null;
     state.runPosition = 0;
@@ -388,10 +406,15 @@
       scope: null,
       mode: null,
       songId: null,
-      rank: null
+      rank: null,
+      correctTitle: null
     };
     ui.resultTime.textContent = "0.000";
     ui.resultMessage.textContent = "";
+    if (ui.resultCorrect) {
+      ui.resultCorrect.textContent = "";
+      ui.resultCorrect.classList.add("hidden");
+    }
     ui.resultName.value = "";
     ui.saveBlock.classList.add("hidden");
     ui.resultRank.classList.add("hidden");
@@ -482,9 +505,13 @@
     }
     songs.forEach((song, i) => {
       const li = document.createElement("li");
-      const title = getSongTitle(song);
-      const label = highlightMatch(title, query);
-      li.innerHTML = `<span class="song-ja">${label}</span>`;
+      const titleJa = song.title_ja || "";
+      const titleEn = song.title_en || "";
+      const jaLabel = highlightMatch(titleJa || titleEn, query);
+      const enLabel = highlightMatch(titleEn, query);
+      const enMatch = Boolean(query && titleEn && titleEn.toLowerCase().includes(query.toLowerCase()));
+      const enClass = enMatch ? "song-en is-match" : "song-en";
+      li.innerHTML = `<span class="song-ja">${jaLabel}</span><span class="${enClass}">${enLabel}</span>`;
       li.dataset.songId = song.id;
       li.addEventListener("mousedown", (e) => {
         // mousedown で選択 (blur より先に発火させる)
@@ -823,6 +850,7 @@
       stopPlay();
       setStatus("status_failed");
       updateNowPlaying(true);
+      state.result.correctTitle = getSongTitle(state.currentSong);
       showResult(false, null);
       return;
     }
@@ -860,6 +888,7 @@
       stopPlay();
       setStatus("status_failed");
       updateNowPlaying(true);
+      state.result.correctTitle = getSongTitle(state.currentSong);
       resetRun();
       updateProgress();
       showResult(false, null);
@@ -1405,8 +1434,10 @@
 
   async function loadRankingLeaderboard() {
     if (!supabaseClient || !songsLoaded) return;
-    const mode = getActiveSegmentValue(ui.rankingMode, "mode", "intro");
-    const scope = getActiveSegmentValue(ui.rankingScope, "scope", "single");
+    const rankingType = getActiveSegmentValue(ui.rankingType, "type", "time");
+    const isFlash = rankingType === "flash";
+    const mode = isFlash ? "random" : getActiveSegmentValue(ui.rankingMode, "mode", "intro");
+    const scope = isFlash ? "flash" : getActiveSegmentValue(ui.rankingScope, "scope", "single");
     const songId = ui.rankingSong.value || state.songs[0]?.id;
     ui.rankingSongWrap.classList.toggle("hidden", scope !== "single");
 
@@ -1429,11 +1460,24 @@
     setQuizActive(false);
     showView("result");
     if (ui.resultContent) ui.resultContent.classList.remove("is-failed");
+    if (ui.resultCorrect) {
+      ui.resultCorrect.textContent = "";
+      ui.resultCorrect.classList.add("hidden");
+    }
 
     if (!success || timeMs == null) {
       if (ui.resultContent) ui.resultContent.classList.add("is-failed");
       ui.resultTime.textContent = "";
       ui.resultMessage.textContent = STATUS_TEXT.status_failed;
+      if (ui.resultCorrect) {
+        if (state.result.correctTitle) {
+          ui.resultCorrect.textContent = `正解: ${state.result.correctTitle}`;
+          ui.resultCorrect.classList.remove("hidden");
+        } else {
+          ui.resultCorrect.textContent = "";
+          ui.resultCorrect.classList.add("hidden");
+        }
+      }
       ui.saveBlock.classList.add("hidden");
       ui.congratsBlock.classList.add("hidden");
       ui.resultLeaderboard.classList.add("hidden");
@@ -1847,6 +1891,14 @@
       if (!button) return;
       setScope(button.dataset.scope);
     });
+
+    if (ui.rankingType) {
+      ui.rankingType.addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+        setRankingType(button.dataset.type);
+      });
+    }
 
     ui.rankingMode.addEventListener("click", (event) => {
       const button = event.target.closest("button");

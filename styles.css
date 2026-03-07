@@ -532,6 +532,7 @@ button.ghost--sm {
 
 .search-list li .song-ja { font-weight: 600; font-size: 14px; }
 .search-list li .song-en { font-size: 11px; color: var(--muted); }
+.search-list li .song-en.is-match { color: var(--text); font-weight: 500; }
 
 .search-list li mark {
   background: transparent;
@@ -611,6 +612,12 @@ button.ghost--sm {
 .result-body {
   text-align: center;
   padding: 8px 0;
+}
+
+.result-correct {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--muted);
 }
 
 /* ─────────────────────────────────────────
@@ -1461,6 +1468,7 @@ body.not-home .search-list li.active {
   color: var(--accent);
 }
 body.not-home .search-list li .song-en { color: var(--muted); }
+body.not-home .search-list li .song-en.is-match { color: var(--text); }
 body.not-home .search-list li mark {
   color: var(--accent);
   background: transparent;

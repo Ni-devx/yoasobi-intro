@@ -97,6 +97,7 @@
             <div class="result-body">
               <div class="result-time" id="result-time">0.000</div>
               <p id="result-message" class="status"></p>
+              <p id="result-correct" class="result-correct hidden"></p>
               <p id="result-rank" class="result-rank hidden"></p>
             </div>
 
@@ -228,6 +229,13 @@
         <div class="ranking-left">
           <div class="ranking-controls">
             <div class="ranking-control">
+              <label>タイプ</label>
+              <div class="segmented" id="ranking-type">
+                <button data-type="time" class="active">Time Attack</button>
+                <button data-type="flash">Flash</button>
+              </div>
+            </div>
+            <div class="ranking-control">
               <label>開始位置</label>
               <div class="segmented" id="ranking-mode">
                 <button data-mode="intro" class="active">Intro</button>
@@ -239,7 +247,6 @@
               <div class="segmented" id="ranking-scope">
                 <button data-scope="single" class="active">Single</button>
                 <button data-scope="marathon">Marathon</button>
-                <button data-scope="flash">Flash</button>
               </div>
             </div>
             <div class="ranking-control" id="ranking-song-wrap">
