@@ -49,6 +49,8 @@
     songs: [],
     mode: "intro",
     scope: "single",
+    gameType: "time",
+    lastTimeScope: "single",
     currentSong: null,
     attemptId: null,
     startSec: 0,        // 再生開始位置（秒）。Intro=0、Randomは任意
@@ -114,6 +116,7 @@
     saveBlock: document.getElementById("save-block"),
     resultName: document.getElementById("result-name"),
     saveScore: document.getElementById("save-score"),
+    typeToggle: document.getElementById("type-toggle"),
     modeToggle: document.getElementById("mode-toggle"),
     scopeToggle: document.getElementById("scope-toggle"),
     rankingMode: document.getElementById("ranking-mode"),
@@ -292,17 +295,44 @@
 
   function setScope(scope) {
     state.scope = scope;
+    if (scope === "single" || scope === "marathon") {
+      state.lastTimeScope = scope;
+    }
     ui.scopeToggle.querySelectorAll("button").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.scope === scope);
     });
     // Flash はモード（開始位置）選択不要（常にランダム開始）
-    const modeControl = ui.modeToggle.closest(".control");
-    if (modeControl) modeControl.classList.toggle("hidden", scope === "flash");
     ui.setupRanking.classList.toggle("hidden", scope === "single");
     ui.playerPanel.classList.toggle("marathon-mode", scope === "marathon" || scope === "flash");
     updateProgress();
     updateStartButton();
     loadSetupLeaderboard();
+  }
+
+  function setGameType(type) {
+    state.gameType = type;
+    if (ui.typeToggle) {
+      ui.typeToggle.querySelectorAll("button").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.type === type);
+      });
+    }
+
+    const isFlash = type === "flash";
+    const modeControl = ui.modeToggle?.closest(".control");
+    const scopeControl = ui.scopeToggle?.closest(".control");
+    if (modeControl) modeControl.classList.toggle("hidden", isFlash);
+    if (scopeControl) scopeControl.classList.toggle("hidden", isFlash);
+
+    if (isFlash) {
+      if (state.scope !== "flash") {
+        setScope("flash");
+      }
+    } else {
+      const nextScope = state.lastTimeScope === "marathon" ? "marathon" : "single";
+      if (state.scope !== nextScope) {
+        setScope(nextScope);
+      }
+    }
   }
 
   function resetRun() {
@@ -1787,6 +1817,14 @@
       }
     });
 
+    if (ui.typeToggle) {
+      ui.typeToggle.addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+        setGameType(button.dataset.type);
+      });
+    }
+
     ui.modeToggle.addEventListener("click", (event) => {
       const button = event.target.closest("button");
       if (!button) return;
@@ -1954,6 +1992,7 @@
     bindEvents();
     setMode(state.mode);
     setScope(state.scope);
+    setGameType(state.scope === "flash" ? "flash" : "time");
     setStatus(state.statusKey || (hasConfig ? "status_ready" : "status_config"));
 
     try {
