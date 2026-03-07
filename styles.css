@@ -436,7 +436,8 @@ button.ghost--sm {
   color: #9e9990;
 }
 
-.video-wrapper.is-obscured .overlay { opacity: 1; }
+.video-wrapper.is-obscured .overlay { opacity: 1; pointer-events: auto; }
+.video-wrapper.is-obscured iframe { pointer-events: none; }
 
 .video-meta {
   display: flex;
@@ -1483,13 +1484,7 @@ body.not-home .song-time-display {
 }
 
 body.view-setup {
-  background-image:
-    linear-gradient(
-      to right,
-      rgba(8, 7, 13, 0.8) 0%,
-      rgba(8, 7, 13, 0.95) 100%
-    ),
-    var(--bg-gradient);
+  background-image: var(--bg-gradient);
   background-size: cover;
   background-position: center top;
   background-attachment: fixed;
