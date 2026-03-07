@@ -15,12 +15,9 @@
   <header class="site-header home-only">
     <div class="site-header__inner">
       <div class="site-header__brand">
-        <p class="eyebrow">Unofficial Fan Project</p>
+        <p class="eyebrow">非公式ファンプロジェクト</p>
         <h1>YOASOBI<br><em>Intro Quiz</em></h1>
-        <p class="subhead" data-i18n="subtitle">全てのMVから出題。(2026/03/06時点)</p>
-      </div>
-      <div class="site-header__actions">
-        <button id="lang-toggle" class="ghost lang-btn">JA / EN</button>
+        <p class="subhead">全てのMVから出題。(2026/03/06時点)</p>
       </div>
     </div>
   </header>
@@ -30,9 +27,9 @@
     <!-- ── プレイヤーパネル（クイズ＋結果共通） ── -->
     <section id="player-panel" class="panel player-panel hidden">
       <div class="sub-nav">
-        <button id="cancel-btn" class="ghost ghost--sm hidden" data-i18n="cancel_game">✕ キャンセル</button>
+        <button id="cancel-btn" class="ghost ghost--sm hidden">✕ キャンセル</button>
         <div class="progress-wrap" id="progress-wrap">
-          <span class="label" data-i18n="progress">Progress</span>
+          <span class="label">進行</span>
           <span id="progress">-</span>
         </div>
         <span id="now-playing" style="display:none" aria-hidden="true"></span>
@@ -48,7 +45,7 @@
               width="640"
               height="360"
               src="https://www.youtube.com/embed/?enablejsapi=1&controls=1"
-              title="YouTube video player"
+              title="YouTube 動画プレーヤー"
               frameborder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowfullscreen
@@ -64,7 +61,7 @@
           <div id="quiz-content" class="quiz-content">
             <div class="timer-area" id="quiz-timer" style="display:none">
               <div id="timer" class="timer">0.000</div>
-              <div id="status" class="status" data-i18n="ready">Ready</div>
+              <div id="status" class="status">準備完了</div>
             </div>
             <div class="answer-area" id="quiz-answer">
               <div class="search-wrap" id="search-wrap">
@@ -75,8 +72,7 @@
                   autocorrect="off"
                   autocapitalize="off"
                   spellcheck="false"
-                  data-i18n-placeholder="answer_placeholder"
-                  placeholder="曲名を入力 / Type song title"
+                  placeholder="曲名を入力"
                 >
                 <ul class="search-list hidden" id="search-list"></ul>
               </div>
@@ -87,16 +83,15 @@
             </div>
             <div class="next-area hidden" id="quiz-next">
               <div id="song-time-display" class="song-time-display"></div>
-              <button id="next-btn" class="ghost" data-i18n="next_song">Next Song →</button>
+              <button id="next-btn" class="ghost">次の曲へ →</button>
             </div>
           </div>
 
           <!-- 結果コンテンツ -->
           <div id="result-content" class="result-content hidden">
             <div class="result-nav">
-              <button id="result-home" class="ghost ghost--sm" data-i18n="back_home">← Home</button>
-              <span class="result-nav__title" data-i18n="result_title">Result</span>
-              <button id="lang-toggle-result" class="ghost ghost--sm lang-btn">JA / EN</button>
+              <button id="result-home" class="ghost ghost--sm">← ホーム</button>
+              <span class="result-nav__title">結果</span>
             </div>
 
             <div class="result-body">
@@ -109,35 +104,35 @@
             <div id="congrats-block" class="congrats-block hidden">
               <div class="congrats-header">
                 <span class="congrats-emoji" aria-hidden="true">🎉</span>
-                <h3 class="congrats-title" data-i18n="congrats_title">おめでとうございます！</h3>
-                <p id="congrats-subtitle" class="congrats-subtitle" data-i18n="congrats_subtitle">Top 30 ランクイン！</p>
+                <h3 class="congrats-title">おめでとうございます！</h3>
+                <p id="congrats-subtitle" class="congrats-subtitle">Top 30 ランクイン！</p>
                 <p id="congrats-rank-display" class="congrats-rank-display"></p>
                 <p id="congrats-summary" class="congrats-summary"></p>
               </div>
 
               <div id="save-block" class="save-block hidden">
-                <p class="save-block__hint" data-i18n="save_hint">名前を入力してランキングに登録</p>
+                <p class="save-block__hint">名前を入力してランキングに登録</p>
                 <div class="save-block__row">
-                  <label for="result-name" class="sr-only" data-i18n="player_name">Name</label>
-                  <input id="result-name" type="text" maxlength="20" placeholder="Anonymous">
-                  <button id="save-score" class="ghost" data-i18n="save_score">Save</button>
+                  <label for="result-name" class="sr-only">名前</label>
+                  <input id="result-name" type="text" maxlength="20" placeholder="匿名">
+                  <button id="save-score" class="ghost">保存</button>
                 </div>
               </div>
 
               <div class="badge-actions">
-                <button id="share-x-btn" class="ghost" data-i18n="share_x">X でシェア</button>
-                <button id="show-badge-btn" class="ghost" data-i18n="show_badge">バッジを保存</button>
+                <button id="share-x-btn" class="ghost">X でシェア</button>
+                <button id="show-badge-btn" class="ghost">バッジを保存</button>
               </div>
             </div>
 
             <div id="result-leaderboard" class="result-leaderboard hidden">
-              <p class="result-leaderboard__label" data-i18n="ranking">Ranking</p>
+              <p class="result-leaderboard__label">ランキング</p>
               <table>
                 <thead id="result-leaderboard-head">
                   <tr>
                     <th>#</th>
-                    <th data-i18n="player">Player</th>
-                    <th data-i18n="time">Time</th>
+                    <th>プレイヤー</th>
+                    <th>タイム</th>
                   </tr>
                 </thead>
                 <tbody id="leaderboard-body-result"></tbody>
@@ -146,8 +141,8 @@
 
             <!-- JS互換用（非表示） -->
             <div class="hidden">
-              <button id="play-again">Play Again</button>
-              <button id="go-ranking-from-result">Rankings</button>
+              <button id="play-again">もう一度</button>
+              <button id="go-ranking-from-result">ランキング</button>
             </div>
           </div>
 
@@ -159,11 +154,11 @@
     <section id="view-home" class="view active">
       <div class="home-panel">
         <div class="home-panel__actions">
-          <button id="go-setup" class="ghost" data-i18n="home_start">Play</button>
-          <button id="go-ranking" class="ghost" data-i18n="home_ranking">Rankings</button>
+          <button id="go-setup" class="ghost">開始</button>
+          <button id="go-ranking" class="ghost">ランキング</button>
         </div>
         <div class="home-panel__hint">
-          <button id="how-to-play-btn" class="text-link" data-i18n="how_to_play_hint">初めての方はこちら →</button>
+          <button id="how-to-play-btn" class="text-link">初めての方はこちら →</button>
         </div>
       </div>
     </section>
@@ -171,30 +166,29 @@
     <!-- ── ゲーム設定 ── -->
     <section id="view-setup" class="view">
       <div class="page-nav">
-        <button id="back-home" class="ghost ghost--sm" data-i18n="back_home">← Home</button>
-        <h2 class="page-nav__title" data-i18n="setup_title">ゲーム設定</h2>
-        <button id="lang-toggle-sub" class="ghost ghost--sm lang-btn">JA / EN</button>
+        <button id="back-home" class="ghost ghost--sm">← ホーム</button>
+        <h2 class="page-nav__title">ゲーム設定</h2>
       </div>
       <div class="panel setup-panel">
         <div class="setup-left">
           <div class="controls">
             <div class="control">
-              <label data-i18n="mode">Start</label>
+              <label>開始位置</label>
               <div class="segmented" id="mode-toggle">
-                <button data-mode="intro" class="active" data-i18n="mode_intro">Intro</button>
-                <button data-mode="random" data-i18n="mode_random">Random</button>
+                <button data-mode="intro" class="active">Intro</button>
+                <button data-mode="random">Random</button>
               </div>
             </div>
             <div class="control">
-              <label data-i18n="scope">Scope</label>
+              <label>対象</label>
               <div class="segmented" id="scope-toggle">
-                <button data-scope="single" class="active" data-i18n="scope_single">Single</button>
-                <button data-scope="marathon" data-i18n="scope_marathon">Marathon</button>
-                <button data-scope="flash" data-i18n="scope_flash">Flash</button>
+                <button data-scope="single" class="active">Single</button>
+                <button data-scope="marathon">Marathon</button>
+                <button data-scope="flash">Flash</button>
               </div>
             </div>
             <div class="control">
-              <button id="start-btn" class="ghost start-btn-full" disabled data-i18n="start_quiz">Start Quiz</button>
+              <button id="start-btn" class="ghost start-btn-full" disabled>スタート</button>
             </div>
           </div>
         </div>
@@ -203,12 +197,12 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th data-i18n="player">Player</th>
-                <th data-i18n="time">Time</th>
+                <th>プレイヤー</th>
+                <th>タイム</th>
               </tr>
             </thead>
             <tbody id="leaderboard-body-setup">
-              <tr><td colspan="4" class="empty" data-i18n="ranking_empty">No records yet.</td></tr>
+              <tr><td colspan="4" class="empty">まだ記録がありません</td></tr>
             </tbody>
           </table>
         </div>
@@ -221,30 +215,29 @@
     <!-- ── ランキング ── -->
     <section id="view-ranking" class="view">
       <div class="page-nav">
-        <button id="ranking-home" class="ghost ghost--sm" data-i18n="back_home">← Home</button>
-        <h2 class="page-nav__title" data-i18n="ranking">Ranking</h2>
-        <button id="lang-toggle-ranking" class="ghost ghost--sm lang-btn">JA / EN</button>
+        <button id="ranking-home" class="ghost ghost--sm">← ホーム</button>
+        <h2 class="page-nav__title">ランキング</h2>
       </div>
       <div class="panel ranking-panel">
         <div class="ranking-left">
           <div class="ranking-controls">
             <div class="ranking-control">
-              <label data-i18n="mode">Start</label>
+              <label>開始位置</label>
               <select id="ranking-mode">
                 <option value="intro">Intro</option>
                 <option value="random">Random</option>
               </select>
             </div>
             <div class="ranking-control">
-              <label data-i18n="scope">Scope</label>
+              <label>対象</label>
               <select id="ranking-scope">
-                <option value="single" data-i18n="scope_single">Single</option>
-                <option value="marathon" data-i18n="scope_marathon">Marathon</option>
-                <option value="flash" data-i18n="scope_flash">Flash</option>
+                <option value="single">Single</option>
+                <option value="marathon">Marathon</option>
+                <option value="flash">Flash</option>
               </select>
             </div>
             <div class="ranking-control" id="ranking-song-wrap">
-              <label data-i18n="song">Song</label>
+              <label>曲</label>
               <select id="ranking-song"></select>
             </div>
           </div>
@@ -254,13 +247,13 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th data-i18n="player">Player</th>
-                <th data-i18n="time">Time</th>
-                <th id="ranking-th-song" data-i18n="song">Song</th>
+                <th>プレイヤー</th>
+                <th>タイム</th>
+                <th id="ranking-th-song">曲</th>
               </tr>
             </thead>
             <tbody id="leaderboard-body-ranking">
-              <tr><td colspan="4" class="empty" data-i18n="ranking_empty">No records yet.</td></tr>
+              <tr><td colspan="4" class="empty">まだ記録がありません</td></tr>
             </tbody>
           </table>
         </div>
@@ -272,35 +265,35 @@
   <!-- 遊び方ポップアップ -->
   <div class="popup-overlay" id="how-to-play-overlay">
     <div class="popup" role="dialog" aria-modal="true" aria-labelledby="popup-title">
-      <button class="popup__close" id="how-to-play-close" aria-label="Close">✕</button>
-      <h2 class="popup__title" id="popup-title" data-i18n="popup_title">遊び方</h2>
+      <button class="popup__close" id="how-to-play-close" aria-label="閉じる">✕</button>
+      <h2 class="popup__title" id="popup-title">遊び方</h2>
 
       <div class="popup__section">
-        <h3 data-i18n="popup_about_title">About</h3>
-        <p data-i18n="popup_about_desc">YOASOBI の全 MV から出題されるイントロクイズです。音声だけを頼りに、できるだけ早く曲名を答えてください。</p>
+        <h3>概要</h3>
+        <p>YOASOBI の全 MV から出題される Intro クイズです。音声だけを頼りに、できるだけ早く曲名を答えてください。</p>
       </div>
 
       <div class="popup__section">
-        <h3 data-i18n="popup_modes_title">モード</h3>
+        <h3>モード</h3>
         <ul>
-          <li data-i18n="popup_mode_intro"><span class="popup__badge">Intro</span>冒頭から再生。0秒スタートで計測。</li>
-          <li data-i18n="popup_mode_random"><span class="popup__badge">Random</span>ランダムな再生位置からスタート。</li>
+          <li><span class="popup__badge">Intro</span>冒頭から再生。0秒スタートで計測。</li>
+          <li><span class="popup__badge">Random</span>Random な再生位置からスタート。</li>
         </ul>
       </div>
 
       <div class="popup__section">
-        <h3 data-i18n="popup_scope_title">スコープ</h3>
+        <h3>スコープ</h3>
         <ul>
-          <li data-i18n="popup_scope_single"><span class="popup__badge">Single</span>1曲勝負。タイムをランキングに登録できます。</li>
-          <li data-i18n="popup_scope_marathon"><span class="popup__badge">Marathon</span>全曲連続。合計タイムでランキングに挑戦。</li>
+          <li><span class="popup__badge">Single</span>1曲勝負。タイムをランキングに登録できます。</li>
+          <li><span class="popup__badge">Marathon</span>全曲連続。合計タイムでランキングに挑戦。</li>
         </ul>
       </div>
 
       <div class="popup__section">
-        <h3 data-i18n="popup_tips_title">ヒント</h3>
+        <h3>ヒント</h3>
         <ul>
-          <li data-i18n="popup_tip_1">曲名を入力して候補から選択。</li>
-          <li data-i18n="popup_tip_3">10秒以内に答えないと失敗になります。</li>
+          <li>曲名を入力して候補から選択。</li>
+          <li>10秒以内に答えないと失敗になります。</li>
         </ul>
       </div>
     </div>
@@ -309,23 +302,23 @@
   <!-- バッジポップアップ -->
   <div class="popup-overlay" id="badge-popup-overlay">
     <div class="popup badge-popup" role="dialog" aria-modal="true">
-      <button class="popup__close" id="badge-popup-close" aria-label="Close">✕</button>
-      <h2 class="popup__title" data-i18n="badge_popup_title">Badge</h2>
+      <button class="popup__close" id="badge-popup-close" aria-label="閉じる">✕</button>
+      <h2 class="popup__title">バッジ</h2>
       <div id="badge-block" class="badge-block">
         <canvas id="badge-canvas"></canvas>
       </div>
       <div class="badge-popup-actions">
-        <button id="download-badge-btn" class="ghost" data-i18n="download_badge">画像を保存</button>
+        <button id="download-badge-btn" class="ghost">画像を保存</button>
       </div>
     </div>
   </div>
 
   <!-- ホーム画面のみ表示されるフッター -->
   <footer class="site-footer home-only">
-    <p>Unofficial Fan Project</p>
-    <p>Videos are streamed via official YouTube embed player</p>
-    <p>All rights belong to their respective copyright holders</p>
-    <p><a href="https://github.com/Ni-devx/yoasobi-intro" target="_blank" rel="noopener" data-i18n="footer_repo">View source and technical things on GitHub</a></p>
+    <p>非公式ファンプロジェクト</p>
+    <p>動画は公式の YouTube 埋め込みプレイヤーで再生しています</p>
+    <p>著作権は各権利者に帰属します</p>
+    <p><a href="https://github.com/Ni-devx/yoasobi-intro" target="_blank" rel="noopener">GitHub でソースを見る</a></p>
   </footer>
 
   <script src="config.js"></script>

@@ -26,6 +26,9 @@
   --radius-sm:    8px;
   --space-page-x: 8vw;
   --space-page-x-sm: 5vw;
+  --bg-gradient: radial-gradient(1100px circle at 12% 8%, rgba(198, 52, 98, 0.38), transparent 62%),
+                 radial-gradient(900px circle at 86% 12%, rgba(124, 48, 170, 0.35), transparent 58%),
+                 linear-gradient(180deg, #0b050c 0%, #1b0622 45%, #12070f 100%);
 }
 
 /* ─────────────────────────────────────────
@@ -44,9 +47,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-image:
-    linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)),
-    url('bg.webp');
+  background-image: var(--bg-gradient);
   background-size: cover;
   background-position: center top;
   background-attachment: fixed;
@@ -218,11 +219,6 @@ button.ghost--sm {
   font-size: 12px;
 }
 
-.lang-btn {
-  letter-spacing: 0.06em;
-  font-size: 11px;
-}
-
 /* ─────────────────────────────────────────
    Segmented control
 ───────────────────────────────────────── */
@@ -274,7 +270,7 @@ button.ghost--sm {
 }
 
 /* ─────────────────────────────────────────
-   Setup panel — bg.webp two-column layout
+   Setup panel — two-column layout
 ───────────────────────────────────────── */
 .setup-panel {
   padding: 0 !important;
@@ -1478,7 +1474,7 @@ body.view-setup {
       rgba(8, 7, 13, 0.8) 0%,
       rgba(8, 7, 13, 0.95) 100%
     ),
-    url('bg.webp');
+    var(--bg-gradient);
   background-size: cover;
   background-position: center top;
   background-attachment: fixed;
@@ -1496,7 +1492,7 @@ body.view-setup #view-setup {
 }
 
 /* ─────────────────────────────────────
-   Setup Panel — ダーク + bg.webp
+   Setup Panel — ダーク
 ───────────────────────────────────── */
 body.not-home .setup-panel {
   background-color: rgba(8, 7, 13, 0.45);
@@ -1516,7 +1512,7 @@ body.not-home .setup-left { position: relative; z-index: 1; }
 body.not-home .setup-panel > .ranking-table { position: relative; z-index: 1; }
 
 /* ─────────────────────────────────────────
-   Ranking Panel — ダーク + bg.webp
+   Ranking Panel — ダーク
 ───────────────────────────────────────── */
 .ranking-panel {
   padding: 0 !important;
@@ -1580,7 +1576,7 @@ body.view-ranking {
       rgba(8, 7, 13, 0.8) 0%,
       rgba(8, 7, 13, 0.95) 100%
     ),
-    url('bg.webp');
+    var(--bg-gradient);
   background-size: cover;
   background-position: center top;
   background-attachment: fixed;

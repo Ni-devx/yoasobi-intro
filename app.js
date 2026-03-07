@@ -4,183 +4,50 @@
   const FLASH_CLIP_SECONDS = 1.0;
   const FLASH_CLIP_POLL_MS = 100;
 
-  const i18n = {
-    ja: {
-      tagline: "非公式ファンプロジェクト",
-      subtitle: "全てのMVから出題。(2026/03/06時点)",
-      home_title: "イントロRTA",
-      home_desc: "開始位置と対象を選んで挑戦。ランキングはサーバー計測です。",
-      home_start: "開始",
-      home_ranking: "ランキング",
-      setup_title: "ゲーム設定",
-      play_title: "クイズ",
-      result_title: "結果",
-      ranking: "ランキング",
-      mode: "開始位置",
-      mode_intro: "イントロ",
-      mode_random: "ランダム",
-      scope: "対象",
-      scope_single: "1曲",
-      scope_marathon: "全曲",
-      rank_song: "ランキング曲",
-      song: "楽曲",
-      player_name: "名前",
-      start: "スタート",
-      start_quiz: "スタート",
-      now_playing: "再生中",
-      progress: "進行",
-      ready: "準備完了",
-      answer_placeholder: "曲名を入力",
-      answer_select_placeholder: "選択してください",
-      submit: "送信",
-      ranking_empty: "まだ記録がありません",
-      player: "プレイヤー",
-      time: "タイム",
-      back: "戻る",
-      back_home: "ホーム",
-      play_again: "もう一度",
-      save_score: "保存",
-      status_ready: "準備完了",
-      status_loading: "接続中...",
-      status_playing: "計測中",
-      status_wrong: "不正解。もう一度!",
-      status_correct: "正解!",
-      status_next: "次の曲へ...",
-      status_completed: "全曲クリア!",
-      status_failed: "失敗。記録なし",
-      status_timeout: "10秒経過。記録なし",
-      status_error: "エラーが発生しました",
-      status_config: "Supabase設定を入力してください",
-      status_saved: "記録を保存しました",
-      status_not_qualified: "Top30外でした",
-      result_rank: "あなたの順位：",
-      result_rank_1: "🥇 1位獲得！",
-      congrats_title: "おめでとうございます！",
-      congrats_subtitle: "Top 30 ランクイン！",
-      save_hint: "名前を入力してランキングに登録",
-      share_x: "X でシェア",
-      download_badge: "画像を保存",
-      next_song: "次の曲へ →",
-      cancel_game: "キャンセル",
-      how_to_play: "遊び方",
-      popup_title: "遊び方",
-      popup_about_title: "About",
-      popup_about_desc: "YOASOBI の全 MV から出題されるイントロクイズです。音声だけを頼りに、できるだけ早く曲名を答えてください。",
-      popup_modes_title: "モード",
-      popup_mode_intro: "イントロ：冒頭から再生",
-      popup_mode_random: "ランダム：ランダムな位置から再生",
-      popup_scope_title: "スコープ",
-      popup_scope_single: "1曲: ランダムに１曲が再生",
-      popup_scope_marathon: "全曲: ランダムな順で全曲再生",
-      popup_tips_title: "ヒント",
-      popup_tip_1: "曲名を入力して候補から選択。",
-      popup_tip_3: "広告が流れている場合、タイマーは自動で停止します。",
-      footer_repo: "View source on GitHub",
-      hidden: "非表示",
-      how_to_play_hint: "初めての方はこちら →",
-      show_badge: "バッジを保存",
-      badge_popup_title: "Badge",
-      download_badge: "画像を保存",
-      scope_flash: "Flash",
-      popup_scope_flash: "1.5秒だけ再生→10秒以内に答える。全曲挑戦し正解数を競う。",
-      status_flash_correct: "✓ 正解!",
-      status_flash_wrong: "✗ 不正解",
-      status_flash_timeout: "⏰ 時間切れ",
-      flash_correct_col: "正解",
-      flash_result_score: "正解数",
-      flash_result_time: "合計タイム"
-    }, en: {
-      tagline: "Unofficial Fan Project",
-      subtitle: "All songs with MVs are included. (As of 2026/03/06)",
-      home_title: "Intro RTA",
-      home_desc: "Choose start position and scope. Rankings are server-timed.",
-      home_start: "Start",
-      home_ranking: "Rankings",
-      setup_title: "Game Setup",
-      play_title: "Quiz",
-      result_title: "Result",
-      ranking: "Ranking",
-      mode: "Start",
-      mode_intro: "Intro",
-      mode_random: "Random Start",
-      scope: "Scope",
-      scope_single: "Single",
-      scope_marathon: "Marathon",
-      rank_song: "Ranking Song",
-      song: "Song",
-      player_name: "Name",
-      start: "Start",
-      start_quiz: "Start",
-      now_playing: "Now Playing",
-      progress: "Progress",
-      ready: "Ready",
-      answer_placeholder: "Type the song title",
-      answer_select_placeholder: "Select a song",
-      submit: "Submit",
-      ranking_empty: "No records yet.",
-      player: "Player",
-      time: "Time",
-      back: "Back",
-      back_home: "Home",
-      play_again: "Play Again",
-      save_score: "Save",
-      status_ready: "Ready",
-      status_loading: "Connecting...",
-      status_playing: "Running",
-      status_wrong: "Wrong. Try again!",
-      status_correct: "Correct!",
-      status_next: "Next song...",
-      status_completed: "Marathon complete!",
-      status_failed: "Failed. No record.",
-      status_timeout: "10s elapsed. No record.",
-      status_error: "Something went wrong",
-      status_config: "Add Supabase settings",
-      status_saved: "Score saved",
-      status_not_qualified: "Not in Top 30",
-      result_rank: "Your rank: ",
-      result_rank_1: "🥇 1st Place!",
-      congrats_title: "Congratulations!",
-      congrats_subtitle: "You made the Top 30!",
-      save_hint: "Enter your name to save your score",
-      share_x: "Share on X",
-      download_badge: "Save image",
-      next_song: "Next Song →",
-      cancel_game: "Cancel",
-      how_to_play: "How to Play",
-      popup_title: "How to Play",
-      popup_about_title: "About",
-      popup_about_desc: "An intro quiz featuring every YOASOBI MV. Listen to the audio and guess the song title as fast as you can.",
-      popup_modes_title: "Modes",
-      popup_mode_intro: "Intro: Play from the intro.",
-      popup_mode_random: "Random: Play from a random position.",
-      popup_scope_title: "Scope",
-      popup_scope_single: "Single:One song per round.",
-      popup_scope_marathon: "Marathon: All songs in a random order.",
-      popup_tips_title: "Tips",
-      popup_tip_1: "Type a song name and select from the suggestions.",
-      popup_tip_3: "If an ad is playing, the timer pauses automatically.",
-      footer_repo: "View source on GitHub",
-      hidden: "Hidden",
-      how_to_play_hint: "New to the quiz? How to play →",
-      show_badge: "Save Badge",
-      badge_popup_title: "Badge",
-      download_badge: "Save Image",
-      scope_flash: "Flash",
-      popup_scope_flash: "1.5s clip → answer within 10s. Play all songs, score by correct count.",
-      status_flash_correct: "✓ Correct!",
-      status_flash_wrong: "✗ Wrong",
-      status_flash_timeout: "⏰ Time's up!",
-      flash_correct_col: "Correct",
-      flash_result_score: "Score",
-      flash_result_time: "Total Time"
-    }
+  const STATUS_TEXT = {
+    status_ready: "準備完了",
+    status_loading: "接続中...",
+    status_playing: "計測中",
+    status_wrong: "不正解。もう一度!",
+    status_correct: "正解!",
+    status_next: "次の曲へ...",
+    status_completed: "全曲クリア!",
+    status_failed: "失敗。記録なし",
+    status_timeout: "10秒経過。記録なし",
+    status_error: "エラーが発生しました",
+    status_config: "Supabase設定を入力してください",
+    status_saved: "記録を保存しました",
+    status_not_qualified: "Top30外でした",
+    status_flash_correct: "✓ 正解!",
+    status_flash_wrong: "✗ 不正解",
+    status_flash_timeout: "⏰ 時間切れ"
   };
+
+  const TEXT = {
+    hidden: "非表示",
+    ranking_empty: "まだ記録がありません",
+    player: "プレイヤー",
+    time: "タイム",
+    flash_correct_col: "正解",
+    flash_result_time: "合計タイム",
+    result_rank_1: "🥇 1位獲得！",
+    congrats_subtitle: "Top 30 ランクイン！",
+    mode_intro: "Intro",
+    mode_random: "Random",
+    scope_flash: "Flash",
+    scope_single: "Single",
+    scope_marathon: "Marathon",
+    you_label: "▶ あなた",
+    anonymous: "匿名",
+    marathon_label: "Marathon"
+  };
+
+  const ANONYMOUS_DB_NAME = "Anonymous";
 
   const state = {
     songs: [],
     mode: "intro",
     scope: "single",
-    language: navigator.language && navigator.language.startsWith("ja") ? "ja" : "en",
     currentSong: null,
     attemptId: null,
     startSec: 0,        // 再生開始位置（秒）。Intro=0、Randomは任意
@@ -265,7 +132,6 @@
     badgePopupClose: document.getElementById("badge-popup-close"),
     overlay: document.getElementById("video-overlay"),
     videoWrapper: document.getElementById("video-wrapper"),
-    langToggle: document.getElementById("lang-toggle"),
     nextArea: document.getElementById("quiz-next"),
     nextBtn: document.getElementById("next-btn"),
     cancelBtn: document.getElementById("cancel-btn"),
@@ -315,28 +181,8 @@
 
   function setStatus(key) {
     state.statusKey = key;
-    const message = i18n[state.language][key] || key;
-    ui.status.textContent = message;
-  }
-
-  function applyTranslations() {
-    document.documentElement.lang = state.language;
-    document.querySelectorAll("[data-i18n]").forEach((el) => {
-      const key = el.dataset.i18n;
-      el.textContent = i18n[state.language][key] || key;
-    });
-    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
-      const key = el.dataset.i18nPlaceholder;
-      el.placeholder = i18n[state.language][key] || key;
-    });
-    updateSongSelects();
-    updateNowPlaying(false);
-    updateProgress();
-    if (state.playing) {
-      // 言語切り替え時にサーチリストを再描画
-      openSearch();
-    }
-    setStatus(state.statusKey || (hasConfig ? "status_ready" : "status_config"));
+    const message = STATUS_TEXT[key] || key;
+    if (ui.status) ui.status.textContent = message;
   }
 
   function showView(name) {
@@ -366,13 +212,22 @@
     }
   }
 
+  function getSongTitle(song) {
+    return song?.title_ja || song?.title_en || "";
+  }
+
+  function formatDisplayName(name) {
+    if (!name || name === ANONYMOUS_DB_NAME) return TEXT.anonymous;
+    return name;
+  }
+
   function updateSongSelects() {
     const rankingSelected = ui.rankingSong.value;
 
     ui.rankingSong.innerHTML = "";
 
     state.songs.forEach((song) => {
-      const label = state.language === "ja" ? song.title_ja : song.title_en;
+      const label = getSongTitle(song);
 
       const optionRanking = document.createElement("option");
       optionRanking.value = song.id;
@@ -386,11 +241,10 @@
   function updateNowPlaying(reveal) {
     if (!ui.nowPlaying) return;
     if (!state.currentSong || !reveal) {
-      ui.nowPlaying.textContent = i18n[state.language].hidden;
+      ui.nowPlaying.textContent = TEXT.hidden;
       return;
     }
-    const title = state.language === "ja" ? state.currentSong.title_ja : state.currentSong.title_en;
-    ui.nowPlaying.textContent = title;
+    ui.nowPlaying.textContent = getSongTitle(state.currentSong);
   }
 
   function updateProgress() {
@@ -525,7 +379,7 @@
     if (song?.answers_normalized && song.answers_normalized.length > 0) {
       return song.answers_normalized[0];
     }
-    return normalizeAnswer(state.language === "ja" ? song?.title_ja : song?.title_en);
+    return normalizeAnswer(getSongTitle(song));
   }
 
   // ── インクリメンタルサーチ ──────────────────────────────────
@@ -548,9 +402,11 @@
     const q = (query || "").trim().toLowerCase();
     if (!q) return state.songs;
     return state.songs.filter((song) => {
+      const titleJa = (song.title_ja || "").toLowerCase();
+      const titleEn = (song.title_en || "").toLowerCase();
       return (
-        song.title_ja.toLowerCase().includes(q) ||
-        song.title_en.toLowerCase().includes(q) ||
+        titleJa.includes(q) ||
+        titleEn.includes(q) ||
         song.id.toLowerCase().includes(q)
       );
     });
@@ -565,9 +421,9 @@
     }
     songs.forEach((song, i) => {
       const li = document.createElement("li");
-      const ja = highlightMatch(song.title_ja, query);
-      const en = highlightMatch(song.title_en, query);
-      li.innerHTML = `<span class="song-ja">${ja}</span><span class="song-en">${en}</span>`;
+      const title = getSongTitle(song);
+      const label = highlightMatch(title, query);
+      li.innerHTML = `<span class="song-ja">${label}</span>`;
       li.dataset.songId = song.id;
       li.addEventListener("mousedown", (e) => {
         // mousedown で選択 (blur より先に発火させる)
@@ -604,7 +460,7 @@
   function selectAndSubmit(song) {
     if (!state.playing) return;
     state.selectedSong = song;
-    ui.answerInput.value = state.language === "ja" ? song.title_ja : song.title_en;
+    ui.answerInput.value = getSongTitle(song);
     closeSearch();
     // 即座に回答送信
     submitAnswer();
@@ -1301,7 +1157,7 @@
       const cell = document.createElement("td");
       cell.colSpan = colCount;
       cell.className = "empty";
-      cell.textContent = i18n[state.language].ranking_empty;
+      cell.textContent = TEXT.ranking_empty;
       emptyRow.appendChild(cell);
       container.appendChild(emptyRow);
       return;
@@ -1315,21 +1171,19 @@
         // Flash: # | Player | 正解 | タイム
         html = `
           <td>${row.rank}</td>
-          <td>${row.display_name || "Anonymous"}</td>
+          <td>${formatDisplayName(row.display_name)}</td>
           <td>${row.correct_count ?? "-"}</td>
           <td>${formatTime(row.time_ms)}</td>
         `;
       } else {
         html = `
           <td>${row.rank}</td>
-          <td>${row.display_name || "Anonymous"}</td>
+          <td>${formatDisplayName(row.display_name)}</td>
           <td>${formatTime(row.time_ms)}</td>
         `;
         if (!isMarathon) {
           const song = state.songs.find((s) => s.id === row.song_id);
-          const songLabel = row.song_id
-            ? (state.language === "ja" ? song?.title_ja : song?.title_en)
-            : "-";
+          const songLabel = row.song_id ? getSongTitle(song) : "-";
           html += `<td>${songLabel || "-"}</td>`;
         }
       }
@@ -1363,15 +1217,15 @@
     // Flash の場合ヘッダーを変更
     if (ui.resultLeaderboardHead) {
       ui.resultLeaderboardHead.innerHTML = isFlash
-        ? `<tr><th>#</th><th data-i18n="player">${i18n[state.language].player}</th><th>${i18n[state.language].flash_correct_col}</th><th data-i18n="time">${i18n[state.language].time}</th></tr>`
-        : `<tr><th>#</th><th data-i18n="player">${i18n[state.language].player}</th><th data-i18n="time">${i18n[state.language].time}</th></tr>`;
+        ? `<tr><th>#</th><th>${TEXT.player}</th><th>${TEXT.flash_correct_col}</th><th>${TEXT.time}</th></tr>`
+        : `<tr><th>#</th><th>${TEXT.player}</th><th>${TEXT.time}</th></tr>`;
     }
 
     // playerData: flash = { correctCount, timeMs }、それ以外 = timeMs (number)
     const playerTimeMs = isFlash ? playerData?.timeMs : playerData;
     const playerCorrect = isFlash ? playerData?.correctCount : null;
 
-    const youLabel = savedName || (state.language === "ja" ? "\u25b6 \u3042\u306a\u305f" : "\u25b6 You");
+    const youLabel = savedName || TEXT.you_label;
 
     let merged;
     let pIdx;
@@ -1381,10 +1235,10 @@
         let isPlayer = false;
         if (isFlash) {
           isPlayer = r.correct_count === playerCorrect && r.time_ms === playerTimeMs &&
-            (r.display_name === savedName || (!savedName && r.display_name === "Anonymous"));
+            (r.display_name === savedName || (!savedName && r.display_name === ANONYMOUS_DB_NAME));
         } else {
           isPlayer = r.time_ms === playerTimeMs &&
-            (r.display_name === savedName || (!savedName && r.display_name === "Anonymous"));
+            (r.display_name === savedName || (!savedName && r.display_name === ANONYMOUS_DB_NAME));
         }
         return { ...r, isPlayer };
       });
@@ -1421,7 +1275,7 @@
       const tr = document.createElement("tr");
       if (row.isPlayer) tr.classList.add("result-my-row");
       const displayRank = start + i + 1;
-      const name = row.isPlayer && !skipInsert ? youLabel : (row.display_name || "Anonymous");
+      const name = row.isPlayer && !skipInsert ? youLabel : formatDisplayName(row.display_name);
       if (isFlash) {
         tr.innerHTML = `
           <td>${displayRank}</td>
@@ -1444,7 +1298,7 @@
       const cell = document.createElement("td");
       cell.colSpan = isFlash ? 4 : 3;
       cell.className = "empty";
-      cell.textContent = i18n[state.language].ranking_empty;
+      cell.textContent = TEXT.ranking_empty;
       emptyRow.appendChild(cell);
       ui.leaderboardResult.appendChild(emptyRow);
     }
@@ -1513,7 +1367,7 @@
 
     if (!success || timeMs == null) {
       ui.resultTime.textContent = "-";
-      ui.resultMessage.textContent = i18n[state.language].status_failed;
+      ui.resultMessage.textContent = STATUS_TEXT.status_failed;
       ui.saveBlock.classList.add("hidden");
       ui.congratsBlock.classList.add("hidden");
       ui.resultLeaderboard.classList.add("hidden");
@@ -1527,7 +1381,7 @@
     // Flash: 正解数を大きく表示、タイムを副表示
     if (isFlash) {
       ui.resultTime.textContent = `${correctCount} / ${totalSongs}`;
-      ui.resultMessage.textContent = `${i18n[state.language].flash_result_time}: ${formatTime(timeMs)}s`;
+      ui.resultMessage.textContent = `${TEXT.flash_result_time}: ${formatTime(timeMs)}s`;
     } else {
       ui.resultTime.textContent = formatTime(timeMs);
     }
@@ -1558,33 +1412,31 @@
     if (state.result.pendingScoreId) {
       // ── Top 30 ランクイン！おめでとう画面を表示 ──
       ui.resultMessage.textContent = isFlash
-        ? `${i18n[state.language].flash_result_time}: ${formatTime(timeMs)}s`
+        ? `${TEXT.flash_result_time}: ${formatTime(timeMs)}s`
         : "";
       ui.congratsBlock.classList.remove("hidden");
 
       // 順位表示
       const rankLabel = projectedRank === 1
-        ? i18n[state.language].result_rank_1
+        ? TEXT.result_rank_1
         : `#${projectedRank}`;
       ui.congratsRankDisplay.textContent = rankLabel;
       if (ui.congratsSubtitle) {
-        ui.congratsSubtitle.textContent = i18n[state.language].congrats_subtitle;
+        ui.congratsSubtitle.textContent = TEXT.congrats_subtitle;
       }
 
       // サマリー
       const songTitle = state.result.songId
-        ? (state.language === "ja"
-            ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
-            : state.songs.find((s) => s.id === state.result.songId)?.title_en)
+        ? getSongTitle(state.songs.find((s) => s.id === state.result.songId))
         : null;
       const modeLabel = state.result.mode === "intro"
-        ? i18n[state.language].mode_intro
-        : i18n[state.language].mode_random;
+        ? TEXT.mode_intro
+        : TEXT.mode_random;
       const scopeLabel = isFlash
-        ? i18n[state.language].scope_flash
+        ? TEXT.scope_flash
         : state.result.scope === "single"
-          ? i18n[state.language].scope_single
-          : i18n[state.language].scope_marathon;
+          ? TEXT.scope_single
+          : TEXT.scope_marathon;
       ui.congratsSummary.textContent = [modeLabel, scopeLabel, songTitle].filter(Boolean).join(" · ");
 
       // バッジを予測順位で先描画
@@ -1599,8 +1451,8 @@
     } else {
       // Top30外
       ui.resultMessage.textContent = isFlash
-        ? `${i18n[state.language].flash_result_time}: ${formatTime(timeMs)}s  ${i18n[state.language].status_not_qualified}`
-        : i18n[state.language].status_not_qualified;
+        ? `${TEXT.flash_result_time}: ${formatTime(timeMs)}s  ${STATUS_TEXT.status_not_qualified}`
+        : STATUS_TEXT.status_not_qualified;
       ui.congratsBlock.classList.add("hidden");
       ui.saveBlock.classList.add("hidden");
       if (rows.length > 0) {
@@ -1665,7 +1517,7 @@
     ctx.restore();
 
     // 曲名 or スコープ表示
-    const label = songTitle || (scope === "marathon" ? (state.language === "ja" ? "全曲マラソン" : "Marathon") : "");
+    const label = songTitle || (scope === "marathon" ? TEXT.marathon_label : "");
     if (label) {
       ctx.font = "400 22px 'Noto Sans JP', sans-serif";
       ctx.textAlign = "center";
@@ -1684,7 +1536,12 @@
     ctx.fillText(formatTime(timeMs) + "s", W / 2, 210);
 
     // モードバッジ
-    const modeLabel = (mode === "intro" ? "Intro" : "Random") + " · " + (scope === "single" ? "Single" : "Marathon");
+    const badgeScope = scope === "single"
+      ? TEXT.scope_single
+      : scope === "flash"
+        ? TEXT.scope_flash
+        : TEXT.scope_marathon;
+    const modeLabel = (mode === "intro" ? TEXT.mode_intro : TEXT.mode_random) + " · " + badgeScope;
     ctx.font = "500 16px 'DM Mono', monospace";
     ctx.fillStyle = "#888899";
     ctx.fillText(modeLabel, W / 2, 255);
@@ -1700,17 +1557,13 @@
     const rank = state.result.rank;
     const timeMs = state.result.timeMs;
     const songTitle = state.result.songId
-      ? (state.language === "ja"
-          ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
-          : state.songs.find((s) => s.id === state.result.songId)?.title_en)
+      ? getSongTitle(state.songs.find((s) => s.id === state.result.songId))
       : null;
 
     const rankStr = rank === 1
-      ? (state.language === "ja" ? "🥇 1位" : "🥇 1st place")
-      : (state.language === "ja" ? `#${rank}位` : `#${rank}`);
-    const tweetText = state.language === "ja"
-      ? `YOASOBI Intro Quiz で${rankStr}を獲得！\nタイム: ${formatTime(timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro #YOASOBIIntroQuiz`
-      : `I ranked ${rankStr} on YOASOBI Intro Quiz!\nTime: ${formatTime(timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro #YOASOBIIntroQuiz`;
+      ? "🥇 1位"
+      : `#${rank}位`;
+    const tweetText = `YOASOBI Intro Quiz で${rankStr}を獲得！\nタイム: ${formatTime(timeMs)}s${songTitle ? `\n🎵 ${songTitle}` : ""}\nhttps://ni-devx.github.io/yoasobi-intro #YOASOBIIntroQuiz`;
 
     // デスクトップ: X を直接開く（ダウンロード不要）
     const xUrl = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(tweetText);
@@ -1738,7 +1591,7 @@
 
     if (error || !data || !data[0] || data[0].status !== "ok") {
       console.error(error);
-      ui.resultMessage.textContent = i18n[state.language].status_error;
+      ui.resultMessage.textContent = STATUS_TEXT.status_error;
       saveBtn.disabled = false;
       return;
     }
@@ -1758,22 +1611,20 @@
     // 順位表示を確定値に更新
     if (rank) {
       const rankLabel = rank === 1
-        ? i18n[state.language].result_rank_1
+        ? TEXT.result_rank_1
         : `#${rank}`;
       ui.congratsRankDisplay.textContent = rankLabel;
     }
 
     // バッジを確定順位で再描画
     const songTitle = state.result.songId
-      ? (state.language === "ja"
-          ? state.songs.find((s) => s.id === state.result.songId)?.title_ja
-          : state.songs.find((s) => s.id === state.result.songId)?.title_en)
+      ? getSongTitle(state.songs.find((s) => s.id === state.result.songId))
       : null;
     const isFlash = state.result.scope === "flash";
     drawBadge(rank, isFlash ? (state.result.correctCount ?? 0) : state.result.timeMs, songTitle, state.result.mode, state.result.scope);
 
     // 保存後の名前でランキングテーブルを更新
-    const savedName = name || "Anonymous";
+    const savedName = name || ANONYMOUS_DB_NAME;
     const rows = await loadLeaderboardData(
       state.result.scope,
       state.result.mode,
@@ -1784,7 +1635,7 @@
       : state.result.timeMs;
     showResultLeaderboard(rows, playerData, savedName, true);
 
-    ui.resultMessage.textContent = i18n[state.language].status_saved;
+    ui.resultMessage.textContent = STATUS_TEXT.status_saved;
 
     await loadSetupLeaderboard();
     await loadRankingLeaderboard();
@@ -1949,13 +1800,6 @@
       showView("home");
     });
 
-    ui.langToggle.addEventListener("click", () => {
-      state.language = state.language === "ja" ? "en" : "ja";
-      applyTranslations();
-      loadSetupLeaderboard();
-      loadRankingLeaderboard();
-    });
-
     // 遊び方ポップアップ
     ui.howToPlayBtn.addEventListener("click", () => {
       ui.howToPlayOverlay.classList.add("is-open");
@@ -1987,16 +1831,6 @@
       }
     });
 
-    // サブ画面の言語トグルボタン（同じ処理）
-    document.querySelectorAll(".lang-btn").forEach((btn) => {
-      if (btn === ui.langToggle) return; // 重複バインド防止
-      btn.addEventListener("click", () => {
-        state.language = state.language === "ja" ? "en" : "ja";
-        applyTranslations();
-        loadSetupLeaderboard();
-        loadRankingLeaderboard();
-      });
-    });
   }
 
   async function loadSongs() {
@@ -2107,10 +1941,10 @@
   };
 
   async function init() {
-    applyTranslations();
     bindEvents();
     setMode(state.mode);
     setScope(state.scope);
+    setStatus(state.statusKey || (hasConfig ? "status_ready" : "status_config"));
 
     try {
       await loadSongs();
