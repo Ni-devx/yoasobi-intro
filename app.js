@@ -1,7 +1,7 @@
 (() => {
   const config = window.APP_CONFIG || {};
   const hasConfig = Boolean(config.SUPABASE_URL && config.SUPABASE_ANON_KEY);
-  const FLASH_CLIP_SECONDS = 1.0;
+  const FLASH_CLIP_SECONDS = 0.5;
   const FLASH_CLIP_POLL_MS = 100;
 
   const STATUS_TEXT = {
@@ -83,8 +83,8 @@
     flashCountdown: 10,       // 残り秒数表示用
     flashCountdownTimer: null, // setInterval ハンドル
     flashWaitingForPlay: false, // Flash: 実際にPLAYING状態になるのを待っているフラグ
-    flashClipStartSec: null,    // Flash: 1.5sクリップの開始時刻(動画内秒)
-    flashClipTimer: null,       // Flash: 1.5s再生の監視タイマー
+    flashClipStartSec: null,    // Flash: 0.5sクリップの開始時刻(動画内秒)
+    flashClipTimer: null,       // Flash: 0.5s再生の監視タイマー
     adMuted: false              // 広告中は強制ミュート
   };
 
@@ -1017,7 +1017,7 @@
     state.submitting = false;
   }
 
-  // Flash: 1.5秒だけ再生してポーズ → カウントダウン開始
+  // Flash: 0.5秒だけ再生してポーズ → カウントダウン開始
   function beginFlashPlay(startSec) {
     state.playing = true;
     state.startSec = startSec;
@@ -1046,7 +1046,7 @@
       player.playVideo();
 
       // onStateChange で実際に PLAYING になった後、
-      // CurrentTime の進行が 1.5s 分確認できたら pause する
+      // CurrentTime の進行が 0.5s 分確認できたら pause する
       state.flashWaitingForPlay = true;
     }
   }
@@ -2037,7 +2037,7 @@
               state.lastPlayStart = Date.now();
             }
 
-            // Flash: 動画が実際に PLAYING になったら 1.5s 分の再生進行を監視
+            // Flash: 動画が実際に PLAYING になったら 0.5s 分の再生進行を監視
             if (state.scope === "flash" && state.flashWaitingForPlay) {
               state.flashWaitingForPlay = false;
               startFlashClipMonitor();
