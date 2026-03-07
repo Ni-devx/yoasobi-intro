@@ -18,6 +18,7 @@
     status_config: "Supabase設定を入力してください",
     status_saved: "記録を保存しました",
     status_not_qualified: "Top30外でした",
+    status_ad_muted: "広告中につき無音",
     status_flash_correct: "✓ 正解!",
     status_flash_wrong: "✗ 不正解",
     status_flash_timeout: "⏰ 時間切れ"
@@ -81,7 +82,8 @@
     flashCountdownTimer: null, // setInterval ハンドル
     flashWaitingForPlay: false, // Flash: 実際にPLAYING状態になるのを待っているフラグ
     flashClipStartSec: null,    // Flash: 1.5sクリップの開始時刻(動画内秒)
-    flashClipTimer: null        // Flash: 1.5s再生の監視タイマー
+    flashClipTimer: null,       // Flash: 1.5s再生の監視タイマー
+    adMuted: false              // 広告中は強制ミュート
   };
 
   const ui = {
@@ -164,7 +166,28 @@
   let songsLoaded = false;
   let cueResolver = null;
   let mediaSessionInterval = null;
-  let adWatchdog = null;
+  function setPlayerVolume(volume) {
+    if (!player || typeof player.setVolume !== "function") return;
+    try {
+      player.setVolume(volume);
+    } catch (error) {
+      console.warn("setVolume failed", error);
+    }
+  }
+
+  function setAdMuted(active) {
+    if (active) {
+      if (state.adMuted) return;
+      state.adMuted = true;
+      setPlayerVolume(0);
+      if (state.playing) setStatus("status_ad_muted");
+      return;
+    }
+    if (!state.adMuted) return;
+    state.adMuted = false;
+    setPlayerVolume(100);
+    if (state.playing) setStatus("status_playing");
+  }
 
   function normalizeAnswer(text) {
     return (text || "")
@@ -302,6 +325,7 @@
     state.playing = false;
     state.submitting = false;
     state.flashWaitingForPlay = false;
+    setAdMuted(false);
     clearFlashClipMonitor();
     // MediaSession 上書きインターバルを停止
     if (mediaSessionInterval) {
@@ -1884,28 +1908,14 @@
             cueResolver = null;
           }
 
-          // 1. タイマーのクリア処理 (ここが重要)
-          if (event.data === YT.PlayerState.PLAYING) {
-            if (adWatchdog) {
-              clearTimeout(adWatchdog);
-              adWatchdog = null;
-            }
-          }
-
-          // 2. 監視タイマーのセット (UNSTARTED 時)
+          // 広告判定: UNSTARTED は広告、PLAYING は本編
           if (event.data === YT.PlayerState.UNSTARTED && state.playing) {
-            if (adWatchdog) clearTimeout(adWatchdog);
-            adWatchdog = setTimeout(() => {
-              // 念のためステータスを再確認
-              if (state.playing && player && player.getPlayerState() === -1) {
-                console.log("広告を検知、自動リロードします");
-                reloadVideo();
-              }
-            }, 2500); 
+            setAdMuted(true);
           }
 
           // 3. 計測ロジック
           if (event.data === YT.PlayerState.PLAYING) {
+            setAdMuted(false);
             // PLAYING になった瞬間にwall-clock計測を開始
             if (state.lastPlayStart === null) {
               state.lastPlayStart = Date.now();
