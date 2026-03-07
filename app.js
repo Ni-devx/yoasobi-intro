@@ -183,9 +183,9 @@
       if (state.playing) setStatus("status_ad_muted");
       return;
     }
+    setPlayerVolume(100);
     if (!state.adMuted) return;
     state.adMuted = false;
-    setPlayerVolume(100);
     if (state.playing) setStatus("status_playing");
   }
 
