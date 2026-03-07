@@ -229,18 +229,18 @@
           <div class="ranking-controls">
             <div class="ranking-control">
               <label>開始位置</label>
-              <select id="ranking-mode">
-                <option value="intro">Intro</option>
-                <option value="random">Random</option>
-              </select>
+              <div class="segmented" id="ranking-mode">
+                <button data-mode="intro" class="active">Intro</button>
+                <button data-mode="random">Random</button>
+              </div>
             </div>
             <div class="ranking-control">
               <label>対象</label>
-              <select id="ranking-scope">
-                <option value="single">Single</option>
-                <option value="marathon">Marathon</option>
-                <option value="flash">Flash</option>
-              </select>
+              <div class="segmented" id="ranking-scope">
+                <button data-scope="single" class="active">Single</button>
+                <button data-scope="marathon">Marathon</button>
+                <button data-scope="flash">Flash</button>
+              </div>
             </div>
             <div class="ranking-control" id="ranking-song-wrap">
               <label>曲</label>

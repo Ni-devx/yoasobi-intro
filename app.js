@@ -273,6 +273,13 @@
     ui.nowPlaying.textContent = getSongTitle(state.currentSong);
   }
 
+  function getActiveSegmentValue(container, dataKey, fallback) {
+    if (!container) return fallback;
+    const active = container.querySelector("button.active");
+    if (!active) return fallback;
+    return active.dataset[dataKey] || fallback;
+  }
+
   function updateProgress() {
     if (state.scope === "marathon" && state.runTotal > 0) {
       if (ui.progress) ui.progress.textContent = `${state.runPosition} / ${state.runTotal}`;
@@ -1398,8 +1405,8 @@
 
   async function loadRankingLeaderboard() {
     if (!supabaseClient || !songsLoaded) return;
-    const mode = ui.rankingMode.value;
-    const scope = ui.rankingScope.value;
+    const mode = getActiveSegmentValue(ui.rankingMode, "mode", "intro");
+    const scope = getActiveSegmentValue(ui.rankingScope, "scope", "single");
     const songId = ui.rankingSong.value || state.songs[0]?.id;
     ui.rankingSongWrap.classList.toggle("hidden", scope !== "single");
 
@@ -1841,8 +1848,22 @@
       setScope(button.dataset.scope);
     });
 
-    ui.rankingMode.addEventListener("change", loadRankingLeaderboard);
-    ui.rankingScope.addEventListener("change", loadRankingLeaderboard);
+    ui.rankingMode.addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button) return;
+      ui.rankingMode.querySelectorAll("button").forEach((btn) => {
+        btn.classList.toggle("active", btn === button);
+      });
+      loadRankingLeaderboard();
+    });
+    ui.rankingScope.addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button) return;
+      ui.rankingScope.querySelectorAll("button").forEach((btn) => {
+        btn.classList.toggle("active", btn === button);
+      });
+      loadRankingLeaderboard();
+    });
     ui.rankingSong.addEventListener("change", loadRankingLeaderboard);
 
     ui.saveScore.addEventListener("click", submitScore);
