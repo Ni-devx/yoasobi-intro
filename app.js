@@ -813,7 +813,10 @@
 
     const result = data[0];
     if (result.status !== "ok") {
-      setStatus("status_wrong");
+      stopPlay();
+      setStatus("status_failed");
+      updateNowPlaying(true);
+      showResult(false, null);
       return;
     }
 
@@ -1418,9 +1421,11 @@
     stopPlayer();
     setQuizActive(false);
     showView("result");
+    if (ui.resultContent) ui.resultContent.classList.remove("is-failed");
 
     if (!success || timeMs == null) {
-      ui.resultTime.textContent = "-";
+      if (ui.resultContent) ui.resultContent.classList.add("is-failed");
+      ui.resultTime.textContent = "";
       ui.resultMessage.textContent = STATUS_TEXT.status_failed;
       ui.saveBlock.classList.add("hidden");
       ui.congratsBlock.classList.add("hidden");

@@ -613,6 +613,21 @@ button.ghost--sm {
 }
 
 /* ─────────────────────────────────────────
+   Result — failure state
+───────────────────────────────────────── */
+.result-content.is-failed .result-nav {
+  justify-content: center;
+}
+
+.result-content.is-failed .result-nav__title {
+  display: none;
+}
+
+.result-content.is-failed .result-time {
+  display: none;
+}
+
+/* ─────────────────────────────────────────
    Result
 ───────────────────────────────────────── */
 .result-panel { display: flex; flex-direction: column; gap: 20px; }
