@@ -143,6 +143,7 @@
     nextBtn: document.getElementById("next-btn"),
     cancelBtn: document.getElementById("cancel-btn"),
     songTimeDisplay: document.getElementById("song-time-display"),
+    songAnswer: document.getElementById("song-answer"),
     howToPlayBtn: document.getElementById("how-to-play-btn"),
     howToPlayOverlay: document.getElementById("how-to-play-overlay"),
     howToPlayClose: document.getElementById("how-to-play-close"),
@@ -432,6 +433,12 @@
     ui.startBtn.disabled = state.playing || !hasConfig || !songsLoaded;
   }
 
+  function clearSongAnswer() {
+    if (!ui.songAnswer) return;
+    ui.songAnswer.textContent = "";
+    ui.songAnswer.classList.add("hidden");
+  }
+
   function setQuizActive(active) {
     ui.playerPanel.classList.toggle("play-active", active);
     ui.cancelBtn.classList.toggle("hidden", !active);
@@ -442,6 +449,7 @@
       ui.answerInput.value = "";
       ui.nextArea.classList.add("hidden");
       ui.songTimeDisplay.textContent = "";
+      clearSongAnswer();
       ui.quizAnswer.style.display = "";
       state.selectedSong = null;
       state.searchActiveIndex = -1;
@@ -507,9 +515,15 @@
       const li = document.createElement("li");
       const titleJa = song.title_ja || "";
       const titleEn = song.title_en || "";
-      const jaLabel = highlightMatch(titleJa || titleEn, query);
-      const enLabel = highlightMatch(titleEn, query);
-      const enMatch = Boolean(query && titleEn && titleEn.toLowerCase().includes(query.toLowerCase()));
+      const baseJa = titleJa || titleEn;
+      const baseEn = titleEn || titleJa;
+      const queryLower = (query || "").toLowerCase();
+      const sameTitle = Boolean(baseJa && baseEn &&
+        baseJa.trim().toLowerCase() === baseEn.trim().toLowerCase());
+      const jaLabel = highlightMatch(baseJa, query);
+      const enLabel = highlightMatch(baseEn, query);
+      const enMatch = sameTitle ||
+        Boolean(queryLower && titleEn && titleEn.toLowerCase().includes(queryLower));
       const enClass = enMatch ? "song-en is-match" : "song-en";
       li.innerHTML = `<span class="song-ja">${jaLabel}</span><span class="${enClass}">${enLabel}</span>`;
       li.dataset.songId = song.id;
@@ -620,6 +634,15 @@
       beginFlashPlay(state.startSec);
     } else {
       beginPlay(state.startSec);
+    }
+  }
+
+  function resumeVideoFromPause() {
+    if (!player || typeof player.playVideo !== "function") return;
+    try {
+      player.playVideo();
+    } catch (error) {
+      console.warn("playVideo failed", error);
     }
   }
 
@@ -1026,6 +1049,7 @@
     state.flashSongStartTime = null;
     clearFlashCountdown();
     clearFlashClipMonitor();
+    clearSongAnswer();
 
     ui.videoWrapper.classList.add("is-obscured");
     setStatus("status_playing");
@@ -1103,6 +1127,15 @@
 
     const pos = state.flashAnswered;
     ui.songTimeDisplay.textContent = wasCorrect ? `#${pos} ✓` : `#${pos} ✗`;
+    const answerTitle = getSongTitle(state.currentSong);
+    if (!wasCorrect && answerTitle && ui.songAnswer) {
+      ui.songAnswer.textContent = `正解: ${answerTitle}`;
+      ui.songAnswer.classList.remove("hidden");
+    } else {
+      clearSongAnswer();
+    }
+
+    resumeVideoFromPause();
 
     state.runPosition = result.next_song_pos;
     state.nextSongId = result.next_song_id;
@@ -1159,6 +1192,7 @@
     state.accumulatedMs = 0;
     state.lastPlayStart = null;
     state.flashSongStartTime = null;
+    clearSongAnswer();
 
     if (!state.runId || !state.nextSongId) {
       setStatus("status_error"); resetRun(); updateStartButton(); return;
@@ -1763,7 +1797,7 @@
       resetAttempt();
       stopPlayer();
       showView("ranking");
-      loadRankingLeaderboard();
+      setRankingType(getActiveSegmentValue(ui.rankingType, "type", "time"));
     });
     ui.backHome.addEventListener("click", () => {
       setQuizActive(false);
@@ -1794,7 +1828,7 @@
       resetAttempt();
       stopPlayer();
       showView("ranking");
-      loadRankingLeaderboard();
+      setRankingType(getActiveSegmentValue(ui.rankingType, "type", "time"));
     });
 
     ui.shareXBtn.addEventListener("click", shareOnX);
