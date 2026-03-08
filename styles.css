@@ -910,6 +910,36 @@ button.ghost--sm {
   opacity: 0.6;
 }
 
+/* ─────────────────────────────────────────
+   Device blocker (below 768px)
+───────────────────────────────────────── */
+.device-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-6);
+  background: rgba(5, 4, 10, 0.65);
+  backdrop-filter: blur(12px);
+  color: #f5f2f8;
+}
+
+.device-blocker__inner {
+  max-width: 520px;
+  width: 100%;
+  padding: var(--space-7) var(--space-6);
+  border-radius: var(--radius);
+  background: rgba(16, 14, 26, 0.9);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  font-size: clamp(14px, 3.6vw, 18px);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+}
+
 .popup__badge {
   display: inline-block;
   font-family: var(--font-mono);
@@ -1226,6 +1256,14 @@ button.ghost--sm {
 
   .popup__title {
     padding-right: 36px;
+  }
+
+  .device-blocker {
+    display: flex;
+  }
+
+  body {
+    overflow: hidden;
   }
 }
 
