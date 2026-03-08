@@ -32,7 +32,7 @@
     flash_correct_col: "正解",
     flash_result_time: "合計タイム",
     record: "記録",
-    result_rank_1: "🥇 1位獲得！",
+    result_rank_1: "1位",
     congrats_subtitle: "Top 30 ランクイン！",
     mode_intro: "Intro",
     mode_random: "Random",
@@ -253,6 +253,11 @@
   function formatDisplayName(name) {
     if (!name || name === ANONYMOUS_DB_NAME) return TEXT.anonymous;
     return name;
+  }
+
+  function formatRankLabel(rank) {
+    if (!rank || Number.isNaN(rank)) return "";
+    return `${rank}位`;
   }
 
   function updateSongSelects() {
@@ -1629,10 +1634,7 @@
       ui.congratsBlock.classList.remove("hidden");
 
       // 順位表示
-      const rankLabel = projectedRank === 1
-        ? TEXT.result_rank_1
-        : `#${projectedRank}`;
-      ui.congratsRankDisplay.textContent = rankLabel;
+      ui.congratsRankDisplay.textContent = formatRankLabel(projectedRank);
       if (ui.congratsSubtitle) {
         ui.congratsSubtitle.textContent = TEXT.congrats_subtitle;
       }
@@ -1822,10 +1824,7 @@
 
     // 順位表示を確定値に更新
     if (rank) {
-      const rankLabel = rank === 1
-        ? TEXT.result_rank_1
-        : `#${rank}`;
-      ui.congratsRankDisplay.textContent = rankLabel;
+      ui.congratsRankDisplay.textContent = formatRankLabel(rank);
     }
 
     // バッジを確定順位で再描画
