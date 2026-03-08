@@ -493,7 +493,8 @@ button.ghost--sm {
 
 .search-wrap { position: relative; }
 
-.search-wrap input {
+.search-wrap input,
+.ranking-song-select {
   width: 100%;
   padding: 14px 18px;
   border-radius: var(--radius);
@@ -506,7 +507,8 @@ button.ghost--sm {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.search-wrap input:focus {
+.search-wrap input:focus,
+.ranking-song-select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-dim);
 }
@@ -1181,7 +1183,8 @@ button.ghost--sm {
   /* ── 回答入力：iOS ズーム防止（font-size: 16px 以上） ── */
   .answer-area { margin-top: var(--space-4); }
 
-  .search-wrap input {
+  .search-wrap input,
+  .ranking-song-select {
     padding: var(--space-3) var(--space-4);
     font-size: 16px;
     border-radius: var(--radius-sm);
@@ -1491,7 +1494,8 @@ body.not-home .status { color: var(--muted); }
 /* ─────────────────────────────────────
    Answer Input — 光る入力欄
 ───────────────────────────────────── */
-body.not-home .search-wrap input {
+body.not-home .search-wrap input,
+body.not-home .ranking-song-select {
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.15);
   color: var(--text);
@@ -1499,7 +1503,8 @@ body.not-home .search-wrap input {
   border-radius: var(--radius);
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
-body.not-home .search-wrap input:focus {
+body.not-home .search-wrap input:focus,
+body.not-home .ranking-song-select:focus {
   background: rgba(255,255,255,0.08);
   border-color: var(--accent);
   box-shadow:
@@ -1599,9 +1604,9 @@ body.not-home .setup-panel > .ranking-table { position: relative; z-index: 1; }
 }
 
 .ranking-left {
-  width: 220px;
+  width: 300px;
   flex-shrink: 0;
-  padding: 28px 24px;
+  padding: var(--space-7) var(--space-6);
   position: relative;
   z-index: 1;
   display: flex;
@@ -1612,7 +1617,7 @@ body.not-home .setup-panel > .ranking-table { position: relative; z-index: 1; }
 .ranking-controls {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--space-5);
 }
 
 .ranking-control label {
