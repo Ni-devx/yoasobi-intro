@@ -1760,6 +1760,9 @@ body.not-home .save-block {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 16px;
+  width: 100%;
+  max-width: min(640px, 100%);
+  margin: 0 auto;
 }
 
 body.not-home .save-block.hidden {
@@ -1776,7 +1779,7 @@ body.not-home .save-block.hidden {
 
 .save-block__row {
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) auto;
+  grid-template-columns: minmax(220px, 1fr) auto;
   gap: 10px;
   align-items: center;
   justify-content: center;
@@ -1791,6 +1794,7 @@ body.not-home .save-block input {
   font-size: 14px;
   caret-color: var(--gold);
   transition: border-color 0.2s, box-shadow 0.2s;
+  min-width: 0;
 }
 body.not-home .save-block input:focus {
   border-color: rgba(240,192,64,0.5);
