@@ -876,7 +876,8 @@ button.ghost--sm {
   padding: 32px 28px 40px;
   max-width: 600px;
   width: 100%;
-  max-height: calc(100vh - 48px);
+  height: min(80vh, 720px);
+  max-height: min(80vh, 720px);
   overflow-y: auto;
   box-shadow: 0 -8px 40px rgba(0,0,0,0.14);
   transform: translateY(30px);
@@ -1763,7 +1764,7 @@ body.not-home .save-block {
   border-radius: var(--radius-sm);
   padding: 16px;
   width: 100%;
-  max-width: min(640px, 100%);
+  max-width: min(720px, 100%);
   margin: 0 auto;
 }
 
@@ -1780,14 +1781,16 @@ body.not-home .save-block.hidden {
 }
 
 .save-block__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
   gap: 10px;
   align-items: center;
   justify-content: center;
 }
 
 body.not-home .save-block input {
+  flex: 1 1 360px;
   background: rgba(255,255,255,0.06);
   border-color: rgba(255,255,255,0.12);
   color: var(--text);
