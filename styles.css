@@ -922,7 +922,7 @@ button.ghost--sm {
   justify-content: center;
   text-align: center;
   padding: var(--space-6);
-  background: rgba(5, 4, 10, 0.65);
+  background: rgba(5, 4, 10, 0.5);
   backdrop-filter: blur(12px);
   color: #f5f2f8;
 }
@@ -932,9 +932,6 @@ button.ghost--sm {
   width: 100%;
   padding: var(--space-7) var(--space-6);
   border-radius: var(--radius);
-  background: rgba(16, 14, 26, 0.9);
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
   font-size: clamp(14px, 3.6vw, 18px);
   line-height: 1.6;
   letter-spacing: 0.02em;
