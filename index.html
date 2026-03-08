@@ -246,7 +246,19 @@
             </div>
             <div class="ranking-control" id="ranking-song-wrap">
               <label>曲</label>
-              <select id="ranking-song" class="ranking-song-select"></select>
+              <div class="search-wrap ranking-search-wrap">
+                <input
+                  id="ranking-song-input"
+                  type="text"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  placeholder="曲名を入力"
+                >
+                <ul class="search-list hidden" id="ranking-song-list"></ul>
+              </div>
+              <input id="ranking-song" type="hidden">
             </div>
           </div>
         </div>
@@ -256,7 +268,7 @@
               <tr>
                 <th>#</th>
                 <th>プレイヤー</th>
-                <th>タイム</th>
+                <th id="ranking-th-time">タイム</th>
                 <th id="ranking-th-song">曲</th>
               </tr>
             </thead>

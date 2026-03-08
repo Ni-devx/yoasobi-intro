@@ -31,6 +31,7 @@
     time: "タイム",
     flash_correct_col: "正解",
     flash_result_time: "合計タイム",
+    record: "記録",
     result_rank_1: "🥇 1位獲得！",
     congrats_subtitle: "Top 30 ランクイン！",
     mode_intro: "Intro",
@@ -71,6 +72,7 @@
     songTimes: [],     // marathon: 曲ごとのタイム(ms)を蓄積
     selectedSong: null,   // インクリメンタルサーチで選択中の曲
     searchActiveIndex: -1, // キーボードで選択中のリスト位置
+    rankingSearchActiveIndex: -1, // ランキング用インクリメンタルサーチ選択位置
     playing: false,
     submitting: false, // 二重送信防止フラグ
     playerReady: false,
@@ -124,9 +126,12 @@
     rankingScope: document.getElementById("ranking-scope"),
     rankingType: document.getElementById("ranking-type"),
     rankingSong: document.getElementById("ranking-song"),
+    rankingSongInput: document.getElementById("ranking-song-input"),
+    rankingSongList: document.getElementById("ranking-song-list"),
     leaderboardSetup: document.getElementById("leaderboard-body-setup"),
     leaderboardRanking: document.getElementById("leaderboard-body-ranking"),
     rankingThSong: document.getElementById("ranking-th-song"),
+    rankingThTime: document.getElementById("ranking-th-time"),
     timer: document.getElementById("timer"),
     status: document.getElementById("status"),
     nowPlaying: document.getElementById("now-playing"),
@@ -251,20 +256,18 @@
   }
 
   function updateSongSelects() {
-    const rankingSelected = ui.rankingSong.value;
+    const rankingSelected = ui.rankingSong?.value;
+    const selectedSong =
+      state.songs.find((song) => song.id === rankingSelected) ||
+      state.songs[0] ||
+      null;
 
-    ui.rankingSong.innerHTML = "";
-
-    state.songs.forEach((song) => {
-      const label = getSongTitle(song);
-
-      const optionRanking = document.createElement("option");
-      optionRanking.value = song.id;
-      optionRanking.textContent = label;
-      ui.rankingSong.appendChild(optionRanking);
-    });
-
-    if (rankingSelected) ui.rankingSong.value = rankingSelected;
+    if (ui.rankingSong) {
+      ui.rankingSong.value = selectedSong?.id || "";
+    }
+    if (ui.rankingSongInput) {
+      ui.rankingSongInput.value = selectedSong ? getSongTitle(selectedSong) : "";
+    }
   }
 
   function updateNowPlaying(reveal) {
@@ -504,6 +507,30 @@
     });
   }
 
+  function createSearchItem(song, query, onSelect) {
+    const li = document.createElement("li");
+    const titleJa = song.title_ja || "";
+    const titleEn = song.title_en || "";
+    const baseJa = titleJa || titleEn;
+    const baseEn = titleEn || titleJa;
+    const queryLower = (query || "").toLowerCase();
+    const sameTitle = Boolean(baseJa && baseEn &&
+      baseJa.trim().toLowerCase() === baseEn.trim().toLowerCase());
+    const jaLabel = highlightMatch(baseJa, query);
+    const enLabel = highlightMatch(baseEn, query);
+    const enMatch = sameTitle ||
+      Boolean(queryLower && titleEn && titleEn.toLowerCase().includes(queryLower));
+    const enClass = enMatch ? "song-en is-match" : "song-en";
+    li.innerHTML = `<span class="song-ja">${jaLabel}</span><span class="${enClass}">${enLabel}</span>`;
+    li.dataset.songId = song.id;
+    li.addEventListener("mousedown", (e) => {
+      // mousedown で選択 (blur より先に発火させる)
+      e.preventDefault();
+      onSelect(song);
+    });
+    return li;
+  }
+
   function renderSearchList(songs, query) {
     ui.searchList.innerHTML = "";
     state.searchActiveIndex = -1;
@@ -511,28 +538,8 @@
       ui.searchList.classList.add("hidden");
       return;
     }
-    songs.forEach((song, i) => {
-      const li = document.createElement("li");
-      const titleJa = song.title_ja || "";
-      const titleEn = song.title_en || "";
-      const baseJa = titleJa || titleEn;
-      const baseEn = titleEn || titleJa;
-      const queryLower = (query || "").toLowerCase();
-      const sameTitle = Boolean(baseJa && baseEn &&
-        baseJa.trim().toLowerCase() === baseEn.trim().toLowerCase());
-      const jaLabel = highlightMatch(baseJa, query);
-      const enLabel = highlightMatch(baseEn, query);
-      const enMatch = sameTitle ||
-        Boolean(queryLower && titleEn && titleEn.toLowerCase().includes(queryLower));
-      const enClass = enMatch ? "song-en is-match" : "song-en";
-      li.innerHTML = `<span class="song-ja">${jaLabel}</span><span class="${enClass}">${enLabel}</span>`;
-      li.dataset.songId = song.id;
-      li.addEventListener("mousedown", (e) => {
-        // mousedown で選択 (blur より先に発火させる)
-        e.preventDefault();
-        selectAndSubmit(song);
-      });
-      ui.searchList.appendChild(li);
+    songs.forEach((song) => {
+      ui.searchList.appendChild(createSearchItem(song, query, selectAndSubmit));
     });
     ui.searchList.classList.remove("hidden");
   }
@@ -566,6 +573,60 @@
     closeSearch();
     // 即座に回答送信
     submitAnswer();
+  }
+
+  // ── ランキング用インクリメンタルサーチ ────────────────
+  function renderRankingSearchList(songs, query) {
+    if (!ui.rankingSongList) return;
+    ui.rankingSongList.innerHTML = "";
+    state.rankingSearchActiveIndex = -1;
+    if (!songs.length) {
+      ui.rankingSongList.classList.add("hidden");
+      return;
+    }
+    songs.forEach((song) => {
+      ui.rankingSongList.appendChild(createSearchItem(song, query, selectRankingSong));
+    });
+    ui.rankingSongList.classList.remove("hidden");
+  }
+
+  function openRankingSearch() {
+    if (!ui.rankingSongInput) return;
+    const q = ui.rankingSongInput.value;
+    const songs = getFilteredSongs(q);
+    renderRankingSearchList(songs, q);
+  }
+
+  function closeRankingSearch() {
+    if (!ui.rankingSongList) return;
+    ui.rankingSongList.classList.add("hidden");
+    state.rankingSearchActiveIndex = -1;
+  }
+
+  function moveRankingSearchActive(dir) {
+    if (!ui.rankingSongList) return;
+    const items = ui.rankingSongList.querySelectorAll("li");
+    if (!items.length) return;
+    items[state.rankingSearchActiveIndex]?.classList.remove("active");
+    state.rankingSearchActiveIndex = Math.max(0,
+      Math.min(items.length - 1, state.rankingSearchActiveIndex + dir));
+    const active = items[state.rankingSearchActiveIndex];
+    active.classList.add("active");
+    active.scrollIntoView({ block: "nearest" });
+  }
+
+  function selectRankingSong(song) {
+    if (!song) return;
+    if (ui.rankingSong) ui.rankingSong.value = song.id;
+    if (ui.rankingSongInput) ui.rankingSongInput.value = getSongTitle(song);
+    closeRankingSearch();
+    loadRankingLeaderboard();
+  }
+
+  function syncRankingSongInput() {
+    if (!ui.rankingSongInput || !ui.rankingSong) return;
+    const song = state.songs.find((s) => s.id === ui.rankingSong.value);
+    if (song) ui.rankingSongInput.value = getSongTitle(song);
   }
   // ────────────────────────────────────────────────────────────
 
@@ -1295,12 +1356,11 @@
 
       let html;
       if (isFlash) {
-        // Flash: # | Player | 正解 | タイム
+        // Flash: # | Player | 記録
         html = `
           <td>${row.rank}</td>
           <td>${formatDisplayName(row.display_name)}</td>
           <td>${row.correct_count ?? "-"}</td>
-          <td>${formatTime(row.time_ms)}</td>
         `;
       } else {
         html = `
@@ -1473,7 +1533,15 @@
     const mode = isFlash ? "random" : getActiveSegmentValue(ui.rankingMode, "mode", "intro");
     const scope = isFlash ? "flash" : getActiveSegmentValue(ui.rankingScope, "scope", "single");
     const songId = ui.rankingSong.value || state.songs[0]?.id;
-    ui.rankingSongWrap.classList.toggle("hidden", scope !== "single");
+    const showSongSelect = scope === "single";
+    ui.rankingSongWrap.classList.toggle("hidden", !showSongSelect);
+    if (!showSongSelect) {
+      closeRankingSearch();
+    }
+
+    if (ui.rankingThTime) {
+      ui.rankingThTime.textContent = isFlash ? TEXT.record : TEXT.time;
+    }
 
     if (ui.rankingThSong) {
       ui.rankingThSong.classList.toggle("hidden", scope !== "single");
@@ -1906,6 +1974,58 @@
         closeSearch();
       }
     });
+
+    // ランキング曲選択のインクリメンタルサーチ
+    let isRankingComposing = false;
+    if (ui.rankingSongInput) {
+      ui.rankingSongInput.addEventListener("compositionstart", () => {
+        isRankingComposing = true;
+      });
+      ui.rankingSongInput.addEventListener("compositionend", () => {
+        isRankingComposing = false;
+        openRankingSearch();
+      });
+      ui.rankingSongInput.addEventListener("input", () => {
+        if (isRankingComposing) return;
+        openRankingSearch();
+      });
+      ui.rankingSongInput.addEventListener("focus", () => {
+        openRankingSearch();
+      });
+      ui.rankingSongInput.addEventListener("blur", () => {
+        setTimeout(() => {
+          closeRankingSearch();
+          syncRankingSongInput();
+        }, 150);
+      });
+      ui.rankingSongInput.addEventListener("keydown", (e) => {
+        const listVisible = !ui.rankingSongList.classList.contains("hidden");
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          if (!listVisible) openRankingSearch();
+          moveRankingSearchActive(1);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          moveRankingSearchActive(-1);
+        } else if (e.key === "Enter") {
+          if (isRankingComposing) return;
+          e.preventDefault();
+          const active = ui.rankingSongList.querySelector("li.active");
+          if (active) {
+            const song = state.songs.find((s) => s.id === active.dataset.songId);
+            if (song) selectRankingSong(song);
+          } else {
+            const firstItem = ui.rankingSongList.querySelector("li");
+            if (firstItem) {
+              const song = state.songs.find((s) => s.id === firstItem.dataset.songId);
+              if (song) selectRankingSong(song);
+            }
+          }
+        } else if (e.key === "Escape") {
+          closeRankingSearch();
+        }
+      });
+    }
 
     if (ui.typeToggle) {
       ui.typeToggle.addEventListener("click", (event) => {
