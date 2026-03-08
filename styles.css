@@ -397,10 +397,21 @@ button.ghost--sm {
     flex: none;
     max-width: 100%;
     width: 100%;
+    align-items: center;
   }
 
   .play-layout__right {
     width: 100%;
+  }
+
+  .video-area {
+    width: 100%;
+    align-items: center;
+  }
+
+  .video-wrapper {
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
@@ -1768,6 +1779,7 @@ body.not-home .save-block.hidden {
   grid-template-columns: minmax(320px, 1fr) auto;
   gap: 10px;
   align-items: center;
+  justify-content: center;
 }
 
 body.not-home .save-block input {
