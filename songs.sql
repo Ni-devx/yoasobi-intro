@@ -40,3 +40,4 @@ on conflict (id) do update set
   video_id = excluded.video_id,
   answers_normalized = excluded.answers_normalized;
 
+
